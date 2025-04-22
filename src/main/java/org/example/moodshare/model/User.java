@@ -23,6 +23,12 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    private String role = "ROLE_USER"; // Default role
+    public static final String ROLE_USER = "ROLE_USER";
+    public static final String ROLE_ADMIN = "ROLE_ADMIN";
 
+    private String role = ROLE_USER; // 默认角色
+
+    public boolean isAdmin() {
+        return ROLE_ADMIN.equals(this.role);
+    }
 }
