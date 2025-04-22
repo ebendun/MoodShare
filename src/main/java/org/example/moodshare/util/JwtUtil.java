@@ -5,25 +5,28 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
-import java.util.Date;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
+    private final SecretKey key;
+    private final long expirationTime;
 
-    @Value("${jwt.expiration}")
-    private long expirationTime;
+    public JwtUtil(@Value("${jwt.expiration:86400000}") long expirationTime) {
+        // 使用 Keys.secretKeyFor 自动生成安全的密钥
+        this.key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+        this.expirationTime = expirationTime;
+    }
 
     public String generateToken(String username) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationTime);
-        Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(now)
@@ -33,7 +36,6 @@ public class JwtUtil {
     }
 
     public String getUsernameFromToken(String token) {
-        Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
@@ -44,7 +46,6 @@ public class JwtUtil {
 
     public boolean validateToken(String token) {
         try {
-            Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
             Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
