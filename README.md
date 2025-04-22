@@ -66,7 +66,7 @@ MySQL/PostgreSQL (或其他 Spring Data JPA 支持的数据库)
 克隆仓库
 
 
-git clone https://github.com/yourusername/moodshare.git
+git clone https://github.com/ebendun/moodshare.git
 cd moodshare
 配置数据库
 
