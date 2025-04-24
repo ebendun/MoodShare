@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UserRegistrationRequest {
-    private String email;
     private String username;
+    private String email;
     private String password;
 }

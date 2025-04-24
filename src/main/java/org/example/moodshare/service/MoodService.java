@@ -12,7 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
+import org.example.moodshare.model.Comment;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,12 +44,15 @@ public class  MoodService {
 
     @Transactional(readOnly = true)
     public List<MoodResponse> getAllMoods(String currentUsername) {
-        List<Mood> moods = moodRepository.findAll();
+        List<Mood> moods = moodRepository.findAllWithCommentsAndLikes();
+
         return moods.stream()
-                .map(mood -> convertToMoodResponse(mood, currentUsername))
+                .map(mood -> {
+                    // 在处理前先复制一份防御性副本
+                    return convertToMoodResponse(mood, currentUsername);
+                })
                 .collect(Collectors.toList());
     }
-
 
     @Transactional(readOnly = true)
     public MoodResponse getMoodById(Long id, String currentUsername) {
@@ -115,24 +118,29 @@ public class  MoodService {
         response.setUsername(mood.getUser().getUsername());
         response.setLikeCount(mood.getLikeCount());
 
-        // 检查当前用户是否点赞
-        response.setLikedByCurrentUser(currentUser != null &&
-                mood.getLikedBy().contains(currentUser));
+        boolean liked = false;
+        if (currentUser != null) {
+            // 使用复制来防止并发修改
+            Set<User> likedByCopy = new HashSet<>(mood.getLikedBy());
+            liked = likedByCopy.contains(currentUser);
+        }
+        response.setLikedByCurrentUser(liked);
 
-        // 将评论集合转换为列表
-        List<CommentResponse> commentResponses = mood.getComments().stream()
-                .map(comment -> {
-                    CommentResponse cr = new CommentResponse();
-                    cr.setId(comment.getId());
-                    cr.setContent(comment.getContent());
-                    cr.setCreatedAt(comment.getCreatedAt());
-                    cr.setUsername(comment.getUser().getUsername());
-                    return cr;
-                })
-                .collect(Collectors.toList());
+        // 避免在流中处理集合，改用传统的循环
+        List<CommentResponse> commentResponses = new ArrayList<>();
+        // 复制集合以避免并发修改
+        Set<Comment> commentsCopy = new HashSet<>(mood.getComments());
+
+        for (Comment comment : commentsCopy) {
+            CommentResponse cr = new CommentResponse();
+            cr.setId(comment.getId());
+            cr.setContent(comment.getContent());
+            cr.setCreatedAt(comment.getCreatedAt());
+            cr.setUsername(comment.getUser().getUsername());
+            commentResponses.add(cr);
+        }
 
         response.setComments(commentResponses);
-
         return response;
     }
 }

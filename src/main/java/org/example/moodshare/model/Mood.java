@@ -8,6 +8,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.*;
 
+
 @Entity
 @Data
 public class Mood {
@@ -30,10 +31,10 @@ public class Mood {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToMany(mappedBy = "mood", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "mood", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private Set<Comment> comments = new HashSet<>();
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "mood_likes",
             joinColumns = @JoinColumn(name = "mood_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id"))
