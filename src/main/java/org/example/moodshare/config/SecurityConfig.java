@@ -44,7 +44,18 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()  // 允许所有认证请求
+                        // 公开访问的端点
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/", "/api").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        // 允许公开获取心情列表和评论，但需要身份验证才能获取特定用户的心情
+                        .requestMatchers(
+                            "/api/moods", 
+                            "/api/moods/*/comments"
+                        ).permitAll()
+                        // 对于OPTIONS请求不需要认证（用于CORS预检）
+                        .requestMatchers(request -> "OPTIONS".equals(request.getMethod())).permitAll()
+                        // 所有其他请求都需要认证
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -54,7 +65,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:8080", "http://localhost"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -68,7 +79,6 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    // 添加这个配置方法
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();

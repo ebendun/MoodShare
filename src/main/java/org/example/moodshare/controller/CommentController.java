@@ -6,9 +6,10 @@ import org.example.moodshare.service.CommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -22,8 +23,8 @@ public class CommentController {
     public ResponseEntity<CommentResponse> addComment(
             @PathVariable Long moodId,
             @RequestBody CommentRequest request,
-            Principal principal) {
-        CommentResponse response = commentService.addComment(moodId, request, principal.getName());
+            @AuthenticationPrincipal UserDetails userDetails) {
+        CommentResponse response = commentService.addComment(moodId, request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -38,8 +39,8 @@ public class CommentController {
     public ResponseEntity<?> deleteComment(
             @PathVariable Long moodId,
             @PathVariable Long commentId,
-            Principal principal) {
-        commentService.deleteComment(commentId, principal.getName());
+            @AuthenticationPrincipal UserDetails userDetails) {
+        commentService.deleteComment(commentId, userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
 }
