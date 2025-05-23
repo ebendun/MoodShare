@@ -38,11 +38,15 @@ public class FriendService {
             throw new RuntimeException("你们已经是好友了");
         }
 
+        // 检查是否已经发送过好友请求
+        if (receiver.getFriendRequests().contains(sender)) {
+            throw new RuntimeException("已经发送过好友请求，请等待对方回应");
+        }
 
         //检查对方是否已经发送过请求，如果是，则直接建立好友关系
-        if (receiver.getFriendRequests().contains(sender)) {
+        if (sender.getFriendRequests().contains(receiver)) {
             // 建立双向好友关系
-            acceptFriendRequest(sender, receiverId);
+            acceptFriendRequest(receiver, sender.getId());
             return;
         }
 
