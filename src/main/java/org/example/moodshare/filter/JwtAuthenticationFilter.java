@@ -30,22 +30,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        boolean shouldNotFilter = path.startsWith("/api/auth/") || 
-               path.equals("/") ||
-               path.equals("/api") ||
-               path.contains("/swagger-ui/") || 
-               path.contains("/v3/api-docs/") ||
-               "OPTIONS".equals(request.getMethod());
-               
-        if (shouldNotFilter) {
-            logger.debug("不过滤请求路径: {}", path);
-        }
-        
-        return shouldNotFilter;
-    }
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,

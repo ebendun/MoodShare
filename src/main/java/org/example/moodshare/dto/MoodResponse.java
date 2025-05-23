@@ -7,7 +7,7 @@ import org.example.moodshare.model.Mood;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
-
+//服务器端返回给客户端的心情内容
 @Data
 public class MoodResponse {
     private Long id;

@@ -3,7 +3,10 @@ package org.example.moodshare.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.Collections;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -11,18 +14,20 @@ import java.util.*;
 
 @Entity
 @Data
+@ToString(exclude = {"user", "comments", "likedBy"})
+@EqualsAndHashCode(exclude = {"user", "comments", "likedBy"})
 public class Mood {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String content;
+    @Column(nullable = false)//不为空
+    private String content;//存储心情内容
 
     private String emoji;
 
     @ElementCollection
-    private Set<String> tags = new HashSet<>();
+    private Set<String> tags = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -32,13 +37,13 @@ public class Mood {
     private User user;
 
     @OneToMany(mappedBy = "mood", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    private Set<Comment> comments = new HashSet<>();
+    private Set<Comment> comments = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "mood_likes",
             joinColumns = @JoinColumn(name = "mood_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private Set<User> likedBy = new HashSet<>();
+    private Set<User> likedBy = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     // 隐私设置
     @Enumerated(EnumType.STRING)

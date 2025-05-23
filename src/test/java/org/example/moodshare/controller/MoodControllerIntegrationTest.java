@@ -96,8 +96,7 @@ public class MoodControllerIntegrationTest {
         tags.add("集成");
         request.setTags(tags);
         request.setPrivacyLevel(Mood.PrivacyLevel.PUBLIC);
-        
-        mockMvc.perform(post("/api/moods")
+          mockMvc.perform(post("/moods")
                 .header("Authorization", "Bearer " + testUserToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -123,9 +122,8 @@ public class MoodControllerIntegrationTest {
         mood2.setUser(testUser);
         mood2.setPrivacyLevel(Mood.PrivacyLevel.FRIENDS);
         moodRepository.save(mood2);
-        
-        // 测试获取所有心情
-        mockMvc.perform(get("/api/moods")
+          // 测试获取所有心情
+        mockMvc.perform(get("/moods")
                 .header("Authorization", "Bearer " + testUserToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(2))))
@@ -140,9 +138,8 @@ public class MoodControllerIntegrationTest {
         mood.setUser(testUser);
         mood.setPrivacyLevel(Mood.PrivacyLevel.PUBLIC);
         mood = moodRepository.save(mood);
-        
-        // 测试获取单个心情
-        mockMvc.perform(get("/api/moods/" + mood.getId())
+          // 测试获取单个心情
+        mockMvc.perform(get("/moods/" + mood.getId())
                 .header("Authorization", "Bearer " + testUserToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", is("测试获取单个心情")))
@@ -158,15 +155,14 @@ public class MoodControllerIntegrationTest {
         mood.setPrivacyLevel(Mood.PrivacyLevel.PUBLIC);
         mood.setLikedBy(new HashSet<>());
         mood = moodRepository.save(mood);
-        
-        // 测试点赞
-        mockMvc.perform(post("/api/moods/" + mood.getId() + "/like")
+          // 测试点赞
+        mockMvc.perform(post("/moods/" + mood.getId() + "/like")
                 .header("Authorization", "Bearer " + friendUserToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.liked", is(true)));
         
         // 测试再次点赞取消
-        mockMvc.perform(post("/api/moods/" + mood.getId() + "/like")
+        mockMvc.perform(post("/moods/" + mood.getId() + "/like")
                 .header("Authorization", "Bearer " + friendUserToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.liked", is(false)));
@@ -186,9 +182,8 @@ public class MoodControllerIntegrationTest {
         updateRequest.setContent("更新后的内容");
         updateRequest.setEmoji("🎉");
         updateRequest.setPrivacyLevel(Mood.PrivacyLevel.FRIENDS);
-        
-        // 测试更新心情
-        mockMvc.perform(put("/api/moods/" + mood.getId())
+          // 测试更新心情
+        mockMvc.perform(put("/moods/" + mood.getId())
                 .header("Authorization", "Bearer " + testUserToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)))
@@ -210,9 +205,8 @@ public class MoodControllerIntegrationTest {
         // 更新请求
         MoodCreateRequest updateRequest = new MoodCreateRequest();
         updateRequest.setContent("尝试未授权更新");
-        
-        // 测试未授权更新
-        mockMvc.perform(put("/api/moods/" + mood.getId())
+          // 测试未授权更新
+        mockMvc.perform(put("/moods/" + mood.getId())
                 .header("Authorization", "Bearer " + friendUserToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)))
@@ -227,14 +221,13 @@ public class MoodControllerIntegrationTest {
         mood.setUser(testUser);
         mood.setPrivacyLevel(Mood.PrivacyLevel.PUBLIC);
         mood = moodRepository.save(mood);
-        
-        // 测试删除心情
-        mockMvc.perform(delete("/api/moods/" + mood.getId())
+          // 测试删除心情
+        mockMvc.perform(delete("/moods/" + mood.getId())
                 .header("Authorization", "Bearer " + testUserToken))
                 .andExpect(status().isNoContent());
         
         // 验证已删除
-        mockMvc.perform(get("/api/moods/" + mood.getId())
+        mockMvc.perform(get("/moods/" + mood.getId())
                 .header("Authorization", "Bearer " + testUserToken))
                 .andExpect(status().isNotFound());
     }
@@ -249,7 +242,7 @@ public class MoodControllerIntegrationTest {
         mood = moodRepository.save(mood);
         
         // 测试未授权删除
-        mockMvc.perform(delete("/api/moods/" + mood.getId())
+        mockMvc.perform(delete("/moods/" + mood.getId())
                 .header("Authorization", "Bearer " + friendUserToken))
                 .andExpect(status().isForbidden());
     }
@@ -270,7 +263,7 @@ public class MoodControllerIntegrationTest {
         moodRepository.save(mood2);
         
         // 测试获取Feed
-        mockMvc.perform(get("/api/moods/feed")
+        mockMvc.perform(get("/moods/feed")
                 .header("Authorization", "Bearer " + testUserToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(2))))

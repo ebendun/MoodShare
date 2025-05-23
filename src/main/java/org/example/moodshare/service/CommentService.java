@@ -8,28 +8,31 @@ import org.example.moodshare.model.User;
 import org.example.moodshare.repository.CommentRepository;
 import org.example.moodshare.repository.MoodRepository;
 import org.example.moodshare.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
+import org.modelmapper.ModelMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class CommentService {
 
-    @Autowired
-    private CommentRepository commentRepository;
+    private final CommentRepository commentRepository;
+    private final MoodRepository moodRepository;
+    private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
 
-    @Autowired
-    private MoodRepository moodRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
+    public CommentService(CommentRepository commentRepository, MoodRepository moodRepository, UserRepository userRepository, ModelMapper modelMapper) {
+        this.commentRepository = commentRepository;
+        this.moodRepository = moodRepository;
+        this.userRepository = userRepository;
+        this.modelMapper = modelMapper;
+    }
 
     @Transactional
     public CommentResponse addComment(Long moodId, CommentRequest request, String username) {
@@ -51,14 +54,16 @@ public class CommentService {
         // 将 Comment 转换为 CommentResponse
         return mapToCommentResponse(savedComment);
     }
+
+
     private CommentResponse mapToCommentResponse(Comment comment) {
-        CommentResponse response = new CommentResponse();
-        response.setId(comment.getId());
-        response.setContent(comment.getContent());
-        response.setCreatedAt(comment.getCreatedAt());
-        response.setUsername(comment.getUser().getUsername());
-        response.setUserId(comment.getUser().getId());
-        response.setUserProfilePicture(comment.getUser().getProfilePicture());
+        // 使用 ModelMapper 将 Comment 转换为 CommentResponse
+        CommentResponse response = modelMapper.map(comment, CommentResponse.class);
+        if (comment.getUser() != null) {
+            response.setUsername(comment.getUser().getUsername());
+            response.setUserId(comment.getUser().getId());
+            response.setUserProfilePicture(comment.getUser().getProfilePicture());
+        }
         return response;
     }
 
@@ -86,17 +91,30 @@ public class CommentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
 
         // 检查是否是评论作者、心情发布者或管理员
+        checkPermission(comment, user);
+
+        // 直接删除评论
+        commentRepository.delete(comment);
+    }
+    /**
+     * 检查用户是否有权限删除评论
+     */
+    private void checkPermission(Comment comment, User user){
+        String username = user.getUsername();
         boolean isCommentOwner = comment.getUser().getUsername().equals(username);
         boolean isMoodOwner = comment.getMood().getUser().getUsername().equals(username);
         boolean isAdmin = user.isAdmin();
-
         if (!isCommentOwner && !isMoodOwner && !isAdmin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权删除此评论");
         }
 
-        // 直接删除评论，不需要手动从集合中移除
-        // comment.getMood().getComments().remove(comment); // 这行可能导致并发修改异常
-        commentRepository.delete(comment);
     }
 
+    /**
+     * 分页获取评论
+     */
+    public Page<CommentResponse> getCommentsByMoodId(Long moodId, Pageable pageable) {
+        Page<Comment> commentPage = commentRepository.findByMoodId(moodId, pageable);
+        return commentPage.map(this::mapToCommentResponse);
+    }
 }

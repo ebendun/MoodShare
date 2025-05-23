@@ -3,9 +3,6 @@ package org.example.moodshare.service;
 import org.example.moodshare.model.Notification;
 import org.example.moodshare.model.User;
 import org.example.moodshare.repository.NotificationRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +11,11 @@ import java.util.List;
 @Service
 public class NotificationService {
 
-    @Autowired
-    private NotificationRepository notificationRepository;
-    
+
+    private final NotificationRepository notificationRepository;
+    public NotificationService(NotificationRepository notificationRepository) {
+        this.notificationRepository = notificationRepository;
+    }
     /**
      * 创建新通知
      */
@@ -76,6 +75,10 @@ public class NotificationService {
      */
     public void deleteNotification(Long notificationId) {
         notificationRepository.deleteById(notificationId);
+    }
+
+    public Notification getNotificationById(Long notificationId) {
+        return notificationRepository.findById(notificationId).orElse(null);
     }
 
 }

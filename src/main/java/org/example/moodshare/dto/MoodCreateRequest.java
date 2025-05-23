@@ -5,7 +5,7 @@ import lombok.Data;
 import org.example.moodshare.model.Mood;
 
 import java.util.Set;
-
+//客户端发送给服务器的心情创建请求
 @Data
 public class MoodCreateRequest {
     private String content;

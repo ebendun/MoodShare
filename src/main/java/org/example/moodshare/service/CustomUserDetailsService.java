@@ -1,7 +1,6 @@
 package org.example.moodshare.service;
 
 import org.example.moodshare.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,8 +12,11 @@ import java.util.Collections;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
+
+    private final UserRepository userRepository;
+    public CustomUserDetailsService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -24,6 +26,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                         user.getPassword(),
                         Collections.singletonList(new SimpleGrantedAuthority(user.getRole()))
                 ))
-                .orElseThrow(() -> new UsernameNotFoundException("用户不存在: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException(STR."用户不存在: \{username}"));
     }
 }

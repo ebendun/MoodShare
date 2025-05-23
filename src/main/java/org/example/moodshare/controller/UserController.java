@@ -6,7 +6,6 @@ import org.example.moodshare.dto.UserProfileUpdateRequest;
 import org.example.moodshare.model.User;
 import org.example.moodshare.service.UserService;
 import org.example.moodshare.util.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,16 +21,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth") // Changed from "/api/auth" to match frontend requests
 public class UserController {
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private AuthenticationManager authenticationManager;
-    @Autowired
-    private JwtUtil jwtUtil;
+
+    private final UserService userService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtil jwtUtil;
+
+    public UserController(UserService userService, AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
+        this.userService = userService;
+        this.authenticationManager = authenticationManager;
+        this.jwtUtil = jwtUtil;
+    }
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 
@@ -74,7 +79,7 @@ public class UserController {
         } catch (AuthenticationException ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                     "success", false,
-                    "message", "登录失败：" + ex.getMessage()
+                    "message", STR."登录失败：\{ex.getMessage()}"
             ));
         }
     }
@@ -100,6 +105,8 @@ public class UserController {
      */
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+        logger.debug("获取当前用户信息: {}", userDetails != null ? userDetails.getUsername() : "未登录");
+        
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                     "success", false,
@@ -107,17 +114,32 @@ public class UserController {
             ));
         }
         
-        User user = userService.getUserByUsername(userDetails.getUsername());
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", user.getId());
-        response.put("username", user.getUsername());
-        response.put("email", user.getEmail());
-        response.put("bio", user.getBio());
-        response.put("profilePicture", user.getProfilePicture());
-        response.put("createdAt", user.getCreatedAt());
-        response.put("lastLoginAt", user.getLastLoginAt());
-        
-        return ResponseEntity.ok(response);
+        try {
+            User user = userService.getUserByUsername(userDetails.getUsername());
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                        "success", false,
+                        "message", "用户不存在"
+                ));
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", user.getId());
+            response.put("username", user.getUsername());
+            response.put("email", user.getEmail());
+            response.put("bio", user.getBio());
+            response.put("profilePicture", user.getProfilePicture());
+            response.put("createdAt", user.getCreatedAt());
+            response.put("lastLoginAt", user.getLastLoginAt());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("获取用户信息失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false, 
+                    "message", STR."获取用户信息失败: \{e.getMessage()}"
+            ));
+        }
     }
     
     /**
@@ -137,5 +159,23 @@ public class UserController {
         response.put("profilePicture", user.getProfilePicture());
         
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * 搜索用户
+     */
+    @GetMapping("/users/search")
+    public ResponseEntity<?> searchUsers(@RequestParam String username) {
+        List<User> users = userService.searchUsersByUsername(username);
+        
+        List<Map<String, Object>> result = users.stream().map(user -> {
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("id", user.getId());
+            userMap.put("username", user.getUsername());
+            userMap.put("profilePicture", user.getProfilePicture());
+            return userMap;
+        }).collect(Collectors.toList());
+        
+        return ResponseEntity.ok(result);
     }
 }

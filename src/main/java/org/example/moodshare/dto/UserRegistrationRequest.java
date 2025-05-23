@@ -1,11 +1,9 @@
 package org.example.moodshare.dto;
 
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 public class UserRegistrationRequest {
     private String username;
     private String email;

@@ -6,5 +6,5 @@ import lombok.Data;
 
 @Data
 public class CommentRequest {
-    private String content;
+    private String content;//接收客户端的评论内容
 }

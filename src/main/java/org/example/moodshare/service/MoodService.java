@@ -2,10 +2,10 @@ package org.example.moodshare.service;
 import org.example.moodshare.dto.MoodCreateRequest;
 import org.example.moodshare.dto.MoodResponse;
 import org.example.moodshare.model.Mood;
+import org.example.moodshare.model.Notification;
 import org.example.moodshare.model.User;
 import org.example.moodshare.repository.MoodRepository;
 import org.example.moodshare.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.example.moodshare.model.Comment;
-import org.example.moodshare.model.Notification;
+
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,14 +21,16 @@ import java.util.stream.Collectors;
 @Service
 public class MoodService {
 
-    @Autowired
-    private MoodRepository moodRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private NotificationService notificationService;
+    private final MoodRepository moodRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+
+    public MoodService(MoodRepository moodRepository, UserRepository userRepository, NotificationService notificationService) {
+        this.moodRepository = moodRepository;
+        this.userRepository = userRepository;
+        this.notificationService = notificationService;
+    }
 
     @Transactional
     public MoodResponse createMood(MoodCreateRequest request, String username) {
@@ -36,25 +38,31 @@ public class MoodService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
 
         Mood mood = new Mood();
-        mood.setContent(request.getContent());
-        mood.setEmoji(request.getEmoji());
-        mood.setTags(request.getTags());
         mood.setUser(user);
-        
         // 设置新增的字段
         return getMoodResponse(request, username, mood);
     }
-
-    private MoodResponse getMoodResponse(MoodCreateRequest request, String username, Mood mood) {
+    /**
+     *设置心情实体
+     */
+    private  void prepareMoodEntity(Mood mood, MoodCreateRequest request) {
+        mood.setContent(request.getContent());
+        mood.setEmoji(request.getEmoji());
+        mood.setTags(request.getTags());
         mood.setPrivacyLevel(request.getPrivacyLevel());
         mood.setLocation(request.getLocation());
         mood.setLatitude(request.getLatitude());
         mood.setLongitude(request.getLongitude());
         mood.setMoodType(request.getMoodType());
         mood.setWeather(request.getWeather());
+    }
 
+    /**
+     * 获取心情响应
+     */
+    private MoodResponse getMoodResponse(MoodCreateRequest request, String username, Mood mood) {
+        prepareMoodEntity(mood, request);
         mood = moodRepository.save(mood);
-
         return convertToMoodResponse(mood, username);
     }
 
@@ -71,23 +79,31 @@ public class MoodService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "没有权限更新这条心情");
         }
 
-        // 更新心情内容
-        mood.setContent(request.getContent());
-        mood.setEmoji(request.getEmoji());
-        mood.setTags(request.getTags());
         return getMoodResponse(request, username, mood);
     }
 
     @Transactional(readOnly = true)
     public List<MoodResponse> getAllMoods(String currentUsername, Mood.PrivacyLevel privacyLevel, Mood.MoodType moodType, String location) {
-        User currentUser = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
+        User currentUser;
+        if (currentUsername != null) {
+            currentUser = userRepository.findByUsername(currentUsername)
+                    .orElse(null); // Use orElse(null) instead of throwing exception
+        } else {
+            currentUser = null;
+        }
 
         List<Mood> moods = moodRepository.findAllWithCommentsAndLikes();
         
         // 根据条件过滤心情
         List<Mood> filteredMoods = moods.stream()
-                .filter(mood -> hasAccessToMood(mood, currentUser))
+                .filter(mood -> {
+                    // For unauthenticated users, only show PUBLIC moods
+                    if (currentUser == null) {
+                        return mood.getPrivacyLevel() == Mood.PrivacyLevel.PUBLIC;
+                    } else {
+                        return hasAccessToMood(mood, currentUser);
+                    }
+                })
                 .filter(mood -> privacyLevel == null || mood.getPrivacyLevel() == privacyLevel)
                 .filter(mood -> moodType == null || mood.getMoodType() == moodType)
                 .filter(mood -> location == null || (mood.getLocation() != null && mood.getLocation().contains(location)))
@@ -189,29 +205,29 @@ public class MoodService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权操作此心情");
         }
 
-        Set<User> likedUsers = mood.getLikedBy();
+        // 使用新的集合进行操作
+        Set<User> likedUsers = new HashSet<>(mood.getLikedBy());
 
-        // 使用 contains 检查而不是在遍历中修改
         boolean result;
         if (likedUsers.contains(user)) {
-            likedUsers.remove(user);  // 直接移除，不在遍历中操作
-            result = false; // 已取消点赞
+            likedUsers.remove(user);
+            result = false;
         } else {
-            likedUsers.add(user);  // 添加用户到点赞集合
-            
-            // 如果不是自己点赞自己的心情，则创建通知
-            if (!mood.getUser().getId().equals(user.getId())) {
+            likedUsers.add(user);
+            // 给作者发送通知
+            if(!mood.getUser().getId().equals(user.getId())) {
                 notificationService.createNotification(
-                    mood.getUser(),
-                    user.getUsername() + "点赞了你的心情",
-                    Notification.NotificationType.MOOD_LIKE,
-                    mood.getId()
+                        mood.getUser(),
+                        STR."\{user.getUsername()} 点赞了你的心情",
+                        Notification.NotificationType.MOOD_LIKE,
+                        mood.getId()
                 );
             }
-            
-            result = true; // 已点赞
+            result = true;
         }
-        
+
+        // 设置回原对象
+        mood.setLikedBy(likedUsers);
         moodRepository.save(mood);
         return result;
     }
@@ -336,22 +352,19 @@ public class MoodService {
     }
 
     private MoodResponse convertToMoodResponse(Mood mood, String currentUsername) {
-        User currentUser = userRepository.findByUsername(currentUsername).orElse(null);
+        // 处理未认证的用户访问，currentUsername可能为null
+        User currentUser = null;
+        if (currentUsername != null) {
+            currentUser = userRepository.findByUsername(currentUsername).orElse(null);
+        }
+
 
         MoodResponse response = new MoodResponse();
         response.setId(mood.getId());
         response.setContent(mood.getContent());
         response.setEmoji(mood.getEmoji());
         response.setTags(mood.getTags());
-        response.setCreatedAt(mood.getCreatedAt());
-        
-        // 设置用户信息
-        MoodResponse.UserDto userDto = new MoodResponse.UserDto();
-        userDto.setId(mood.getUser().getId());
-        userDto.setUsername(mood.getUser().getUsername());
-        userDto.setProfilePicture(mood.getUser().getProfilePicture());
-        response.setUser(userDto);
-        
+
         // 设置点赞信息
         response.setLikeCount(mood.getLikeCount());
         boolean liked = currentUser != null && mood.getLikedBy().contains(currentUser);
@@ -365,13 +378,21 @@ public class MoodService {
         response.setMoodType(mood.getMoodType());
         response.setWeather(mood.getWeather());
 
+        //添加用户信息
+        MoodResponse.UserDto userDto = new MoodResponse.UserDto();
+        userDto.setId(mood.getUser().getId());
+        userDto.setUsername(mood.getUser().getUsername());
+        userDto.setProfilePicture(mood.getUser().getProfilePicture());
+        response.setUser(userDto);
+
         // 处理评论
-        List<MoodResponse.CommentDto> commentDtos = mood.getComments().stream()
+        List<Comment> commentsCopy = new ArrayList<>(mood.getComments()); // 创建评论集合的副本
+        List<MoodResponse.CommentDto> commentDtos = commentsCopy.stream()
                 .map(this::getCommentDto)
                 .collect(Collectors.toList());
-                
+
         response.setComments(commentDtos);
-        
+
         return response;
     }
 

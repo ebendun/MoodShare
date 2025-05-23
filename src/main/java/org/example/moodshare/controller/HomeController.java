@@ -24,11 +24,11 @@ public class HomeController {
         response.put("message", "MoodShare API");
         response.put("status", "可用");
         response.put("endpoints", new String[] {
-            "/api/auth/login",
-            "/api/auth/register", 
-            "/api/moods",
-            "/api/friends",
-            "/api/notifications" 
+            "/auth/login",
+            "/auth/register", 
+            "/moods",
+            "/friends",
+            "/notifications" 
         });
         return response;
     }

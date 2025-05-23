@@ -3,20 +3,26 @@ package org.example.moodshare.service;
 import org.example.moodshare.repository.UserRepository;
 import org.example.moodshare.model.User;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @Service
 public class UserService {
-    @Autowired
-    private UserRepository userRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Transactional
     public User registerUser(String username, String email, String password) {
         if(userRepository.findByUsername(username).isPresent()) {
             throw new RuntimeException("Username is already in use");
@@ -64,5 +70,12 @@ public class UserService {
         // 更新密码
         user.setPassword(passwordEncoder.encode(newPassword));
         return userRepository.save(user);
+    }
+    
+    /**
+     * 根据用户名模糊搜索用户
+     */
+    public List<User> searchUsersByUsername(String username) {
+        return userRepository.findByUsernameContaining(username);
     }
 }

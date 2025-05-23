@@ -19,14 +19,17 @@ public class Notification {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
-    private User user;    private String content;
+    private User user;//通知的接收者
+
+    private String content;//通知内容
 
     @Enumerated(EnumType.STRING)
     private NotificationType type;
     
     private Long referenceId;
+
     @Column(name = "is_read", columnDefinition = "boolean default false")
-    private boolean isRead = false;
+    private boolean isRead = false;//通知默认未读
 
     private LocalDateTime createdAt = LocalDateTime.now();
 

@@ -4,7 +4,6 @@ import org.example.moodshare.dto.MoodCreateRequest;
 import org.example.moodshare.dto.MoodResponse;
 import org.example.moodshare.model.Mood;
 import org.example.moodshare.service.MoodService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,16 +14,25 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/moods")
+@RequestMapping("/moods") // Changed from "/api/moods" to match frontend requests
 public class MoodController {
 
-    @Autowired
-    private MoodService moodService;
+
+    private final MoodService moodService;
+    public MoodController(final MoodService moodService) {
+        this.moodService = moodService;
+    }
 
     @PostMapping
-    public ResponseEntity<MoodResponse> createMood(
+    public ResponseEntity<?> createMood(
             @RequestBody MoodCreateRequest request, 
             @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "success", false,
+                "message", "创建心情需要登录"
+            ));
+        }
         MoodResponse response = moodService.createMood(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -35,7 +43,9 @@ public class MoodController {
             @RequestParam(required = false) Mood.PrivacyLevel privacyLevel,
             @RequestParam(required = false) Mood.MoodType moodType,
             @RequestParam(required = false) String location) {
-        List<MoodResponse> moods = moodService.getAllMoods(userDetails.getUsername(), privacyLevel, moodType, location);
+        // Handle both authenticated and unauthenticated requests
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        List<MoodResponse> moods = moodService.getAllMoods(username, privacyLevel, moodType, location);
         return ResponseEntity.ok(moods);
     }
     

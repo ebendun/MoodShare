@@ -1,16 +1,20 @@
 package org.example.moodshare.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
 import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
+@Data
+@ToString(exclude = {"friends", "friendRequests"})
+@EqualsAndHashCode(exclude = {"friends", "friendRequests"})
 public class User {
 
     @Id
@@ -32,10 +36,10 @@ public class User {
     private String role = ROLE_USER; // 默认角色
     
     // 个人资料字段
-    private String profilePicture;
-    private String bio;
+    private String profilePicture;//头像
+    private String bio;//个人简介
     private LocalDateTime createdAt = LocalDateTime.now();
-    private LocalDateTime lastLoginAt;
+    private LocalDateTime lastLoginAt;//最后登录时间
     
     // 好友关系
     @ManyToMany
@@ -44,7 +48,7 @@ public class User {
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "friend_id")
     )
-    private Set<User> friends = new HashSet<>();
+    private Set<User> friends = Collections.newSetFromMap(new ConcurrentHashMap<>());
     
     // 好友请求
     @ManyToMany
@@ -53,7 +57,7 @@ public class User {
         joinColumns = @JoinColumn(name = "receiver_id"),
         inverseJoinColumns = @JoinColumn(name = "sender_id")
     )
-    private Set<User> friendRequests = new HashSet<>();
+    private Set<User> friendRequests = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     public boolean isAdmin() {
         return ROLE_ADMIN.equals(this.role);

@@ -3,7 +3,6 @@ package org.example.moodshare.service;
 import org.example.moodshare.model.Notification;
 import org.example.moodshare.model.User;
 import org.example.moodshare.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
@@ -12,17 +11,25 @@ import java.util.Set;
 @Service
 public class FriendService {
 
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private NotificationService notificationService;
+
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+
+    public FriendService(UserRepository userRepository, NotificationService notificationService) {
+        this.userRepository = userRepository;
+        this.notificationService = notificationService;
+    }
     
     /**
      * 发送好友请求
      */
     @Transactional
     public void sendFriendRequest(User sender, Long receiverId) {
+        //防止自己添加自己
+        if (sender.getId().equals(receiverId)) {
+            throw new RuntimeException("不能添加自己为好友");
+        }
+
         User receiver = userRepository.findById(receiverId)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
         
@@ -30,11 +37,15 @@ public class FriendService {
         if (sender.getFriends().contains(receiver)) {
             throw new RuntimeException("你们已经是好友了");
         }
-        
-        // 检查是否已经发送过请求
+
+
+        //检查对方是否已经发送过请求，如果是，则直接建立好友关系
         if (receiver.getFriendRequests().contains(sender)) {
-            throw new RuntimeException("已经发送过好友请求");
+            // 建立双向好友关系
+            acceptFriendRequest(sender, receiverId);
+            return;
         }
+
         
         // 添加好友请求
         receiver.getFriendRequests().add(sender);
@@ -43,7 +54,7 @@ public class FriendService {
         // 创建通知
         notificationService.createNotification(
                 receiver,
-                sender.getUsername() + "向你发送了好友请求",
+                STR."\{sender.getUsername()}向你发送了好友请求",
                 Notification.NotificationType.FRIEND_REQUEST,
                 sender.getId()
         );
@@ -75,7 +86,7 @@ public class FriendService {
         // 创建通知
         notificationService.createNotification(
                 sender,
-                receiver.getUsername() + "接受了你的好友请求",
+                STR."\{receiver.getUsername()}接受了你的好友请求",
                 Notification.NotificationType.FRIEND_ACCEPT,
                 receiver.getId()
         );
