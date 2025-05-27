@@ -39,6 +39,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String path = request.getRequestURI();
             logger.debug("处理请求: {}", path);
 
+            // 跳过静态资源路径的JWT验证
+            if (path.startsWith("/uploads/")) {
+                logger.debug("跳过静态资源路径的JWT验证: {}", path);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             String jwt = getJwtFromRequest(request);
             
             if (jwt == null) {

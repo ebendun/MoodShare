@@ -5,9 +5,13 @@
     <div class="row">
       <!-- 左侧好友列表 -->
       <div class="col-md-8">
-        <div class="card mb-4">
-          <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">我的好友</h5>
+        <div class="card mb-4">          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <h5 class="mb-0 me-2">我的好友</h5>
+              <button class="btn btn-sm btn-outline-secondary" @click="refreshFriendsList" :disabled="isLoading">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
             <button class="btn btn-sm btn-primary" @click="showAddFriendModal = true">
               <i class="bi bi-person-plus"></i> 添加好友
             </button>
@@ -20,25 +24,24 @@
               </div>
               <p class="mt-2">加载中...</p>
             </div>
-            
-            <!-- 好友列表 -->
+              <!-- 好友列表 -->
             <div v-else-if="friends.length > 0" class="list-group">
               <div 
                 v-for="friend in friends" 
                 :key="friend.id" 
                 class="list-group-item d-flex justify-content-between align-items-center"
-              >
-                <div class="d-flex align-items-center">
-                  <img 
-                    :src="friend.profilePicture || 'https://via.placeholder.com/40'" 
+              >                <div class="d-flex align-items-center">
+                  <SafeImage 
+                    :src="friend.profilePicture" 
                     alt="Profile" 
-                    class="rounded-circle me-3" 
+                    imageClass="rounded-circle me-3" 
                     width="40" 
                     height="40"
-                  >
+                  />
                   <div>
                     <h6 class="mb-0">{{ friend.username }}</h6>
                     <small v-if="friend.bio" class="text-muted">{{ friend.bio }}</small>
+                    <div><span class="badge bg-success">好友</span></div>
                   </div>
                 </div>
                 <div>
@@ -69,8 +72,11 @@
       <!-- 右侧好友请求 -->
       <div class="col-md-4">
         <div class="card">
-          <div class="card-header bg-white">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">好友请求</h5>
+            <button class="btn btn-sm btn-outline-secondary" @click="refreshFriendRequests" :disabled="isLoadingRequests">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
           </div>
           <div class="card-body">
             <!-- 加载中 -->
@@ -86,15 +92,14 @@
                 v-for="request in friendRequests" 
                 :key="request.id" 
                 class="list-group-item"
-              >
-                <div class="d-flex align-items-center mb-2">
-                  <img 
-                    :src="request.profilePicture || 'https://via.placeholder.com/40'" 
+              >                <div class="d-flex align-items-center mb-2">
+                  <SafeImage 
+                    :src="request.profilePicture" 
                     alt="Profile" 
-                    class="rounded-circle me-2" 
+                    imageClass="rounded-circle me-2" 
                     width="40" 
                     height="40"
-                  >
+                  />
                   <div>
                     <h6 class="mb-0">{{ request.username }}</h6>
                     <small v-if="request.bio" class="text-muted">{{ request.bio }}</small>
@@ -138,8 +143,7 @@
             <button type="button" class="btn-close" @click="showAddFriendModal = false"></button>
           </div>
           <div class="modal-body">
-            <form @submit.prevent="sendFriendRequest">
-              <div class="mb-3">
+            <form @submit.prevent="sendFriendRequest">              <div class="mb-3">
                 <label for="username" class="form-label">用户名</label>
                 <input 
                   type="text" 
@@ -147,8 +151,14 @@
                   id="username" 
                   v-model="friendUsername" 
                   required
-                  placeholder="输入您想添加为好友的用户名"
+                  placeholder="输入对方的用户名（不是用户ID）"
+                  autocomplete="username"
                 >
+                <div class="form-text">输入对方的完整用户名，如 "xiaoming" 或 "123456"</div>
+              </div>
+              
+              <div v-if="addFriendError" class="alert alert-danger mb-3">
+                {{ addFriendError }}
               </div>
               
               <div class="d-grid gap-2">
@@ -215,11 +225,11 @@ export default {
   name: 'FriendsView',
   setup() {
     const store = useStore()
-    
-    // 状态
+      // 状态
     const isLoading = computed(() => store.state.loading)
     const isLoadingRequests = ref(false)
     const isProcessing = ref(false)
+    const addFriendError = ref('')
     
     // 数据
     const friends = computed(() => store.getters.userFriends)
@@ -250,31 +260,60 @@ export default {
       if (!friendUsername.value.trim()) return
       
       isProcessing.value = true
+      addFriendError.value = ''
       
       try {
-        // 直接传入用户名，store 会处理搜索用户和发送请求
-        await store.dispatch('sendFriendRequest', friendUsername.value.trim())
+        console.log('尝试添加好友:', friendUsername.value.trim());
+        // 传入用户名，不要尝试解析为用户ID
+        const response = await store.dispatch('sendFriendRequest', friendUsername.value.trim());
+        console.log('添加好友响应:', response);
+        
         showAddFriendModal.value = false
         friendUsername.value = ''
-        alert('好友请求已发送')
+        alert('好友请求已发送，对方接受后你们将成为好友')
       } catch (error) {
-        console.error('Error sending friend request:', error)
+        console.error('Error sending friend request:', error);
+        
         // 显示更具体的错误信息
-        const errorMessage = error.message || '发送好友请求失败，请稍后再试'
-        alert(errorMessage)
+        if (error.response && error.response.data && error.response.data.message) {
+          addFriendError.value = error.response.data.message;
+        } else if (error.message) {
+          addFriendError.value = error.message;
+        } else {
+          addFriendError.value = '发送好友请求失败，请稍后再试';
+        }
       } finally {
         isProcessing.value = false
       }
-    }
-    
-    // 接受好友请求
+    }    // 接受好友请求
     const acceptRequest = async (requestId) => {
       isProcessing.value = true
       
       try {
-        await store.dispatch('acceptFriendRequest', requestId)
+        console.log('接受好友请求, ID:', requestId);
+        const response = await store.dispatch('acceptFriendRequest', requestId);
+        console.log('好友请求接受响应:', response);
+        
+        // 显示操作成功消息
+        alert('已成功接受好友请求');
+        
+        // 强制刷新数据
+        await loadData();
       } catch (error) {
-        console.error('Error accepting friend request:', error)
+        console.error('接受好友请求失败:', error);
+        
+        // 显示具体错误信息
+        let errorMessage = '接受好友请求失败';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        alert(errorMessage);
+        
+        // 刷新好友请求列表，确保UI显示正确
+        refreshFriendRequests();
       } finally {
         isProcessing.value = false
       }
@@ -315,6 +354,36 @@ export default {
         isProcessing.value = false
       }
     }
+      // 手动刷新好友请求
+    const refreshFriendRequests = async () => {
+      if (isLoadingRequests.value) return;
+      
+      isLoadingRequests.value = true;
+      try {
+        console.log('手动刷新好友请求列表...');
+        await store.dispatch('fetchFriendRequests');
+        console.log('好友请求数量:', friendRequests.value.length);
+      } catch (error) {
+        console.error('刷新好友请求失败:', error);
+      } finally {
+        isLoadingRequests.value = false;
+      }
+    };
+    
+    // 手动刷新好友列表
+    const refreshFriendsList = async () => {
+      if (isLoading.value) return;
+      
+      try {
+        console.log('手动刷新好友列表...');
+        await store.dispatch('fetchFriends');
+        console.log('好友数量:', friends.value.length);
+        alert('好友列表已更新');
+      } catch (error) {
+        console.error('刷新好友列表失败:', error);
+        alert('刷新好友列表失败');
+      }
+    };
     
     // 格式化日期
     const formatDate = (dateString) => {
@@ -330,12 +399,25 @@ export default {
     // 加载初始数据
     onMounted(() => {
       loadData()
-    })
+      
+      // 设置定时器，每30秒刷新一次好友请求列表
+      const requestTimer = setInterval(() => {
+        console.log('自动刷新好友请求列表...');
+        store.dispatch('fetchFriendRequests').catch(error => {
+          console.error('自动刷新好友请求失败:', error);
+        });
+      }, 30000);
+      
+      // 组件卸载时清除定时器
+      return () => {
+        clearInterval(requestTimer);
+      };    });
     
     return {
       isLoading,
       isLoadingRequests,
       isProcessing,
+      addFriendError,
       friends,
       friendRequests,
       showAddFriendModal,
@@ -347,6 +429,8 @@ export default {
       rejectRequest,
       confirmRemoveFriend,
       removeFriend,
+      refreshFriendRequests,
+      refreshFriendsList,
       formatDate
     }
   }

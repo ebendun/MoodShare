@@ -91,11 +91,21 @@ public class FriendController {
                 @AuthenticationPrincipal UserDetails userDetails,
                 @PathVariable Long userId) {
 
+            System.out.println("收到好友请求: 目标用户ID = " + userId);
+            
+            if (userId == null) {
+                return ResponseEntity.badRequest().body(new FriendsApiResponse<>(false, "用户ID不能为空", null));
+            }
+            
             User currentUser = getCurrentUser(userDetails);
+            System.out.println("当前用户: " + currentUser.getUsername() + " (ID: " + currentUser.getId() + ")");
+            
             try {
                 friendService.sendFriendRequest(currentUser, userId);
+                System.out.println("好友请求发送成功");
                 return ResponseEntity.ok(new FriendsApiResponse<>(true, "好友请求已发送", null));
             } catch (RuntimeException e) {
+                System.out.println("好友请求发送失败: " + e.getMessage());
                 return ResponseEntity.badRequest().body(new FriendsApiResponse<>(false, e.getMessage(), null));
             }
         }
@@ -108,11 +118,27 @@ public class FriendController {
                 @AuthenticationPrincipal UserDetails userDetails,
                 @PathVariable Long userId) {
 
+            System.out.println("接受好友请求: 发送者ID = " + userId);
             User currentUser = getCurrentUser(userDetails);
+            System.out.println("当前用户: " + currentUser.getUsername() + " (ID: " + currentUser.getId() + ")");
+            
             try {
                 friendService.acceptFriendRequest(currentUser, userId);
-                return ResponseEntity.ok(new FriendsApiResponse<>(true, "已接受好友请求", null));
+                System.out.println("好友请求接受成功");
+                
+                // 获取添加的好友信息，作为响应返回
+                User friend = userService.getUserById(userId);
+                System.out.println("获取到好友信息: " + friend.getUsername() + " (ID: " + friend.getId() + ")");
+                
+                Map<String, Object> friendInfo = new HashMap<>();
+                friendInfo.put("id", friend.getId());
+                friendInfo.put("username", friend.getUsername());
+                friendInfo.put("profilePicture", friend.getProfilePicture());
+                System.out.println("返回好友信息: " + friendInfo);
+                
+                return ResponseEntity.ok(new FriendsApiResponse<>(true, "已接受好友请求", friendInfo));
             } catch (RuntimeException e) {
+                System.out.println("接受好友请求失败: " + e.getMessage());
                 return ResponseEntity.badRequest().body(new FriendsApiResponse<>(false, e.getMessage(), null));
             }
         }

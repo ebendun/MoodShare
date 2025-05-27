@@ -25,6 +25,14 @@ module.exports = {
       '/users': {
         target: 'http://localhost:8080',
         changeOrigin: true
+      },
+      '/files': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
       }
     }
   },

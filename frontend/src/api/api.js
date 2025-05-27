@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: '',  // Don't use /api since we're already proxying directly
+  baseURL: '',
   timeout: 10000
 });
 
@@ -40,12 +40,35 @@ api.interceptors.response.use(
 
 // 用户相关API
 export const userApi = {
-  login: (username, password) => api.post('/auth/login', { username, password }),
-  register: (username, email, password) => api.post('/auth/register', { username, email, password }),
-  getProfile: () => api.get('/auth/me'),
-  updateProfile: (bio, profilePicture) => api.put('/auth/profile', { bio, profilePicture }),
-  checkStatus: () => api.get('/auth/status'),
-  searchByUsername: (username) => api.get(`/users/search?username=${encodeURIComponent(username)}`)
+  login: (username, password) => api.post('/auth/login', { username, password }),//登录
+  register: (username, email, password) => api.post('/auth/register', { username, email, password }),//注册
+  getProfile: () => api.get('/auth/me'),//获取用户信息
+  getUserById: (userId) => api.get(`/auth/users/${userId}`),//获取指定用户信息
+  updateProfile: (bio, profilePicture) => api.put('/auth/profile', { bio, profilePicture }),//更新用户信息
+  checkStatus: () => api.get('/auth/status'),//检查用户状态
+  searchByUsername: (username) => api.get(`/auth/users/search?username=${encodeURIComponent(username)}`)
+};
+
+// 文件上传API
+export const fileApi = {
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/files/upload/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+  uploadMoodImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/files/upload/mood', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  }
 };
 
 // 心情相关API
@@ -56,13 +79,25 @@ export const moodApi = {
     if (moodType) params.moodType = moodType;
     if (location) params.location = location;
     return api.get('/moods', { params });
-  },
+  },//获取心情列表
   getMoodById: (id) => api.get(`/moods/${id}`),
-  createMood: (moodData) => api.post('/moods', moodData),
+  getUserMoods: () => {
+    console.log('API 调用: getUserMoods');
+    return api.get('/moods/user')
+      .then(response => {
+        console.log('获取用户心情成功:', response);
+        return response;
+      })
+      .catch(error => {
+        console.error('获取用户心情API错误:', error.response?.data);
+        throw error;
+      });
+  },
+  createMood: (moodData) => api.post('/moods', moodData),//创建心情
   updateMood: (id, moodData) => api.put(`/moods/${id}`, moodData),
   deleteMood: (id) => api.delete(`/moods/${id}`),
   toggleLike: (id) => api.post(`/moods/${id}/like`),
-  getFeed: (page = 0, size = 20) => api.get(`/moods/feed?page=${page}&size=${size}`),
+  getFeed: (page = 0, size = 20) => api.get(`/moods/feed?page=${page}&size=${size}`),//获取心情动态
   getFriendsMoods: () => api.get('/moods/friends'),
   getNearbyMoods: (latitude, longitude, radiusKm = 10) => 
     api.get(`/moods/nearby?latitude=${latitude}&longitude=${longitude}&radiusKm=${radiusKm}`),
@@ -74,10 +109,47 @@ export const moodApi = {
 
 // 好友相关API
 export const friendApi = {
-  getFriends: () => api.get('/friends'),
+  getFriends: () => {
+    console.log('API 调用: getFriends');
+    return api.get('/friends')
+      .then(response => {
+        console.log('获取好友列表成功:', response);
+        return response;
+      })
+      .catch(error => {
+        console.error('获取好友列表API错误:', error.response?.data);
+        throw error;
+      });
+  },
   getFriendRequests: () => api.get('/friends/requests'),
-  sendFriendRequest: (userId) => api.post(`/friends/request/${userId}`),
-  acceptFriendRequest: (userId) => api.post(`/friends/accept/${userId}`),
+  sendFriendRequest: (userId) => {
+    console.log('API 调用: sendFriendRequest, userId:', userId, 'type:', typeof userId);
+    // 确保传入的是有效的用户ID（数字类型）
+    if (typeof userId !== 'number' || isNaN(userId) || userId <= 0) {
+      console.error('无效的用户ID:', userId);
+      return Promise.reject(new Error('无效的用户ID'));
+    }
+    return api.post(`/friends/request/${userId}`);
+  },  acceptFriendRequest: (userId) => {
+    console.log('API 调用: acceptFriendRequest, userId:', userId);
+    return api.post(`/friends/accept/${userId}`)
+      .then(response => {
+        console.log('接受好友请求成功:', response);
+        
+        // 解析返回的数据，确保处理不同的返回格式
+        if (response.data && response.data.data) {
+          console.log('好友信息已返回:', response.data.data);
+        } else if (response.data && response.data.success) {
+          console.log('请求成功，但无详细好友信息');
+        }
+        
+        return response;
+      })
+      .catch(error => {
+        console.error('接受好友请求API错误:', error.response?.data);
+        throw error;
+      });
+  },
   rejectFriendRequest: (userId) => api.post(`/friends/reject/${userId}`),
   removeFriend: (friendId) => api.delete(`/friends/${friendId}`)
 };

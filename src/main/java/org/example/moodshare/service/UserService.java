@@ -76,6 +76,26 @@ public class UserService {
      * 根据用户名模糊搜索用户
      */
     public List<User> searchUsersByUsername(String username) {
-        return userRepository.findByUsernameContaining(username);
+        System.out.println("搜索用户名: " + username);
+        List<User> users = userRepository.findByUsernameContaining(username);
+        System.out.println("找到匹配用户数: " + users.size());
+        if (!users.isEmpty()) {
+            for (User user : users) {
+                System.out.println("- ID: " + user.getId() + ", 用户名: " + user.getUsername());
+            }
+        }
+        return users;
+    }
+    
+    /**
+     * 根据用户ID获取用户
+     */
+    public User getUserById(Long userId) {
+        System.out.println("通过ID获取用户: " + userId);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    System.out.println("错误: 找不到用户, ID = " + userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在");
+                });
     }
 }

@@ -137,7 +137,7 @@ public class UserController {
             logger.error("获取用户信息失败: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false, 
-                    "message", STR."获取用户信息失败: \{e.getMessage()}"
+                    "message", "获取用户信息失败: " + e.getMessage()
             ));
         }
     }
@@ -177,5 +177,39 @@ public class UserController {
         }).collect(Collectors.toList());
         
         return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * 获取指定用户的公开信息
+     */
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<?> getUserById(@PathVariable Long userId) {
+        logger.debug("获取用户信息: userId={}", userId);
+        
+        try {
+            User user = userService.getUserById(userId);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                        "success", false,
+                        "message", "用户不存在"
+                ));
+            }
+            
+            // 只返回公开信息，不包含邮箱等敏感信息
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", user.getId());
+            response.put("username", user.getUsername());
+            response.put("bio", user.getBio());
+            response.put("profilePicture", user.getProfilePicture());
+            response.put("createdAt", user.getCreatedAt());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("获取用户信息失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false, 
+                    "message", "获取用户信息失败: " + e.getMessage()
+            ));
+        }
     }
 }

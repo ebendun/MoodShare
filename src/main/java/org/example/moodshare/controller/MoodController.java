@@ -80,6 +80,19 @@ public class MoodController {
         List<MoodResponse> moods = moodService.getUserMoods(userId, userDetails.getUsername());
         return ResponseEntity.ok(moods);
     }
+    
+    @GetMapping("/user")
+    public ResponseEntity<List<MoodResponse>> getCurrentUserMoods(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        // 获取当前登录用户的心情
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(List.of());
+        }
+        // 查找当前用户的用户ID
+        Long currentUserId = moodService.getUserIdByUsername(userDetails.getUsername());
+        List<MoodResponse> moods = moodService.getUserMoods(currentUserId, userDetails.getUsername());
+        return ResponseEntity.ok(moods);
+    }
 
     @PostMapping("/{id}/like")
     public ResponseEntity<Map<String, Boolean>> toggleLike(

@@ -109,13 +109,13 @@
             <div class="input-group">
               <span class="input-group-text">
                 <i class="bi bi-geo-alt"></i>
-              </span>
-              <input 
+              </span>              <input 
                 type="text" 
                 class="form-control" 
                 id="location" 
                 v-model="mood.location" 
                 placeholder="添加位置信息"
+                autocomplete="address-level2"
               >
               <button 
                 type="button" 

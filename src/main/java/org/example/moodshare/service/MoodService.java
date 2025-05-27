@@ -42,6 +42,16 @@ public class MoodService {
         // 设置新增的字段
         return getMoodResponse(request, username, mood);
     }
+    
+    /**
+     * 根据用户名获取用户ID
+     */
+    @Transactional(readOnly = true)
+    public Long getUserIdByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(User::getId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
+    }
     /**
      *设置心情实体
      */

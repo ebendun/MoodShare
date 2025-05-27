@@ -25,13 +25,13 @@
           <div class="card-body">
             <div class="d-flex justify-content-between mb-3">
               <div class="d-flex align-items-center">
-                <img 
-                  :src="mood.user.profilePicture || 'https://via.placeholder.com/50'" 
-                  class="rounded-circle me-3" 
+                <SafeImage 
+                  :src="mood.user.profilePicture || ''" 
+                  alt="Profile" 
+                  imageClass="rounded-circle me-3" 
                   width="50" 
                   height="50" 
-                  alt="Profile"
-                >
+                />
                 <div>
                   <h5 class="mb-0">{{ mood.user.username }}</h5>
                   <small class="text-muted">{{ formatDate(mood.createdAt) }}</small>
@@ -163,13 +163,13 @@
             
             <!-- 评论列表 -->
             <div v-if="mood.comments && mood.comments.length > 0">              <div v-for="comment in mood.comments" :key="comment.id" class="d-flex mb-3">
-                <img 
-                  :src="(comment.user && comment.user.profilePicture) || 'https://via.placeholder.com/40'" 
-                  class="rounded-circle me-3" 
+                <SafeImage 
+                  :src="(comment.user && comment.user.profilePicture) || ''" 
+                  alt="Comment user" 
+                  imageClass="rounded-circle me-3" 
                   width="40" 
                   height="40" 
-                  alt="Comment user"
-                >
+                />
                 <div class="p-3 bg-light rounded flex-grow-1">
                   <div class="d-flex justify-content-between mb-2">
                     <strong>{{ comment.user ? comment.user.username : 'Unknown User' }}</strong>
@@ -194,13 +194,13 @@
           <div class="card-body">
             <h5 class="card-title">用户信息</h5>
             <div class="text-center mb-3">
-              <img 
-                :src="mood.user.profilePicture || 'https://via.placeholder.com/100'" 
-                class="rounded-circle" 
+              <SafeImage 
+                :src="mood.user.profilePicture || ''" 
+                alt="Profile" 
+                imageClass="rounded-circle" 
                 width="100" 
                 height="100" 
-                alt="Profile"
-              >
+              />
               <h5 class="mt-2">{{ mood.user.username }}</h5>
             </div>
             <hr>
@@ -227,9 +227,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
+import SafeImage from '../components/SafeImage.vue'
 
 export default {
   name: 'MoodDetailView',
+  components: {
+    SafeImage
+  },
   props: {
     id: {
       type: String,

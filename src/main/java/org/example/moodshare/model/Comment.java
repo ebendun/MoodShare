@@ -19,9 +19,9 @@ public class Comment {
     private String content; // 评论内容
     private LocalDateTime createdAt = LocalDateTime.now();// 评论时间
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     private User user;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Mood mood;
 }

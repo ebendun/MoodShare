@@ -51,6 +51,10 @@ public class SecurityConfig {
             "/api"
     };
 
+    private static final String[] PUBLIC_STATIC_PATHS = {
+            "/uploads/**"
+    };
+
     private static final String[] PUBLIC_SWAGGER_PATHS = {
             "/swagger-ui/**",
             "/v3/api-docs/**",
@@ -80,6 +84,8 @@ public class SecurityConfig {
                         .requestMatchers(PUBLIC_AUTH_PATHS).permitAll()
                         // API相关
                         .requestMatchers(PUBLIC_API_PATHS).permitAll()
+                        // 静态资源相关
+                        .requestMatchers(PUBLIC_STATIC_PATHS).permitAll()
                         // Swagger相关
                         .requestMatchers(PUBLIC_SWAGGER_PATHS).permitAll()
                         // 公开心情相关的GET

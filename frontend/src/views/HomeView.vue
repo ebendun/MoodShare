@@ -31,7 +31,13 @@
             
             <div class="mb-3">
               <label class="form-label">位置</label>
-              <input type="text" class="form-control" v-model="filters.location" placeholder="输入位置关键词">
+              <input 
+                type="text" 
+                class="form-control" 
+                v-model="filters.location" 
+                placeholder="输入位置关键词"
+                autocomplete="address-level2"
+              >
             </div>
             
             <button class="btn btn-primary w-100" @click="applyFilters">
@@ -92,13 +98,14 @@
           <div class="card mb-4 mood-card" v-for="mood in moods" :key="mood.id">
             <div class="card-body">
               <div class="d-flex justify-content-between mb-2">
-                <div class="d-flex align-items-center">                  <img 
-                    :src="(mood.user && mood.user.profilePicture) || 'https://via.placeholder.com/40'" 
-                    class="rounded-circle me-2" 
+                <div class="d-flex align-items-center">
+                  <SafeImage 
+                    :src="(mood.user && mood.user.profilePicture) || ''" 
+                    alt="Profile" 
+                    imageClass="rounded-circle me-2" 
                     width="40" 
                     height="40" 
-                    alt="Profile"
-                  >
+                  />
                   <div>
                     <h5 class="mb-0">{{ mood.user ? mood.user.username : 'Unknown User' }}</h5>
                     <small class="text-muted">
@@ -187,13 +194,13 @@
                 <!-- 评论预览 (最多显示2条) -->              <div v-if="mood.comments && mood.comments.length > 0" class="mt-3">
                 <hr>
                 <div v-for="comment in mood.comments.slice(0, 2)" :key="comment.id" class="d-flex mb-2">
-                  <img 
-                    :src="(comment.user && comment.user.profilePicture) || 'https://via.placeholder.com/30'" 
-                    class="rounded-circle me-2" 
+                  <SafeImage 
+                    :src="(comment.user && comment.user.profilePicture) || ''" 
+                    alt="Comment user" 
+                    imageClass="rounded-circle me-2" 
                     width="30" 
                     height="30" 
-                    alt="Comment user"
-                  >
+                  />
                   <div class="p-2 bg-light rounded flex-grow-1">
                     <div class="d-flex justify-content-between">
                       <strong>{{ comment.user ? comment.user.username : 'Unknown User' }}</strong>
@@ -231,9 +238,13 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useStore } from 'vuex'
 // Removed unused import: useRouter
+import SafeImage from '../components/SafeImage.vue'
 
 export default {
   name: 'HomeView',
+  components: {
+    SafeImage
+  },
   setup() {
     const store = useStore()
     // Router functionality is not currently used in this component

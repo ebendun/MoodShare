@@ -51,12 +51,18 @@ const routes = [
     component: MoodEditView,
     meta: { requiresAuth: true },
     props: true
-  },
-  {
+  },  {
     path: '/friends',
     name: 'friends',
     component: FriendsView,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/:id',
+    name: 'user-profile',
+    component: ProfileView,
+    meta: { requiresAuth: true },
+    props: true
   },
   {
     path: '/:pathMatch(.*)*',

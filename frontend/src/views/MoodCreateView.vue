@@ -60,14 +60,14 @@
           <!-- 标签 -->
           <div class="mb-3">
             <label for="tag" class="form-label">标签</label>
-            <div class="input-group">
-              <input 
+            <div class="input-group">              <input 
                 type="text" 
                 class="form-control" 
                 id="tag" 
                 v-model="tagInput" 
                 placeholder="输入标签后按回车添加"
                 @keydown.enter.prevent="addTag"
+                autocomplete="off"
               >
               <button 
                 type="button" 
@@ -101,13 +101,13 @@
             <div class="input-group">
               <span class="input-group-text">
                 <i class="bi bi-geo-alt"></i>
-              </span>
-              <input 
+              </span>              <input 
                 type="text" 
                 class="form-control" 
                 id="location" 
                 v-model="mood.location" 
                 placeholder="添加位置信息"
+                autocomplete="address-level2"
               >
               <button 
                 type="button" 

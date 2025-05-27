@@ -71,9 +71,16 @@ export default createStore({
     },
     SET_FRIEND_REQUESTS(state, requests) {
       state.friendRequests = requests
-    },
-    ADD_FRIEND(state, friend) {
-      state.friends.push(friend)
+    },    ADD_FRIEND(state, friend) {
+      console.log('添加好友到列表:', friend);
+      // 检查是否已经存在，避免重复添加
+      const exists = state.friends.some(f => f.id === friend.id);
+      if (!exists) {
+        state.friends.push(friend);
+        console.log('好友已添加到列表，当前列表数量:', state.friends.length);
+      } else {
+        console.log('好友已经存在于列表中，不重复添加');
+      }
     },
     REMOVE_FRIEND(state, friendId) {
       state.friends = state.friends.filter(f => f.id !== friendId)
@@ -223,8 +230,7 @@ export default createStore({
       async logout({ commit }) {
       commit('CLEAR_AUTH')
     },
-    
-    // 获取用户个人资料
+      // 获取用户个人资料
     async fetchUserProfile({ commit }) {
       commit('SET_LOADING', true)
       try {
@@ -238,6 +244,21 @@ export default createStore({
       } catch (error) {
         console.error('Error fetching user profile:', error)
         // Don't set error state as this is often called in the background
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+    
+    // 获取指定用户信息
+    async fetchUserById({ commit }, userId) {
+      commit('SET_LOADING', true)
+      try {
+        const response = await userApi.getUserById(userId)
+        return response.data
+      } catch (error) {
+        console.error('Error fetching user by id:', error)
+        commit('SET_ERROR', '获取用户信息失败')
         throw error
       } finally {
         commit('SET_LOADING', false)
@@ -350,8 +371,7 @@ export default createStore({
         commit('SET_LOADING', false)
       }
     },
-    
-    async deleteMood({ commit }, moodId) {
+      async deleteMood({ commit }, moodId) {
       commit('SET_LOADING', true)
       commit('CLEAR_ERROR')
       
@@ -364,6 +384,36 @@ export default createStore({
         throw error
       } finally {
         commit('SET_LOADING', false)
+      }
+    },
+    
+    async fetchUserMoods({ commit }) {
+      commit('SET_LOADING', true)
+      commit('CLEAR_ERROR')
+      
+      try {
+        console.log('开始获取用户心情...');
+        const response = await moodApi.getUserMoods();
+        console.log('用户心情获取成功:', response);
+        
+        // 正确解析响应数据
+        let moodsData = [];
+        if (response.data) {
+          if (Array.isArray(response.data)) {
+            moodsData = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            moodsData = response.data.data;
+          }
+        }
+        
+        console.log('解析后的用户心情:', moodsData, '数量:', moodsData.length);
+        return moodsData;
+      } catch (error) {
+        console.error('获取用户心情失败:', error);
+        commit('SET_ERROR', error.response?.data?.message || '获取用户心情失败');
+        throw error;
+      } finally {
+        commit('SET_LOADING', false);
       }
     },
     
@@ -441,104 +491,164 @@ export default createStore({
       commit('CLEAR_ERROR')
       
       try {
-        const response = await friendApi.getFriends()
-        commit('SET_FRIENDS', response.data)
-        return response.data
-      } catch (error) {
-        commit('SET_ERROR', error.response?.data?.message || '获取好友列表失败')
-        throw error
-      } finally {
-        commit('SET_LOADING', false)
-      }
-    },
-    
-    async fetchFriendRequests({ commit }) {
-      commit('SET_LOADING', true)
-      commit('CLEAR_ERROR')
-      
-      try {
-        const response = await friendApi.getFriendRequests()
-        commit('SET_FRIEND_REQUESTS', response.data)
-        return response.data
-      } catch (error) {
-        commit('SET_ERROR', error.response?.data?.message || '获取好友请求失败')
-        throw error
-      } finally {
-        commit('SET_LOADING', false)
-      }
-    },
-  async searchUserByUsername({ commit }, username) {
-      commit('SET_LOADING', true)
-      commit('CLEAR_ERROR')
-      
-      try {
-        const response = await userApi.searchByUsername(username)
-        // The response will be a list of users matching the username
-        const users = response.data
+        console.log('开始获取好友列表...');
+        const response = await friendApi.getFriends();
+        console.log('好友列表获取成功:', response);
         
-        if (!users || users.length === 0) {
-          throw new Error(`找不到用户 "${username}"`)
-        }
-        
-        // Find exact match or use the first one
-        const user = users.find(u => u.username.toLowerCase() === username.toLowerCase()) || users[0]
-        return user
-      } catch (error) {
-        commit('SET_ERROR', error.response?.data?.message || '查找用户失败')
-        throw error
-      } finally {
-        commit('SET_LOADING', false)
-      }
-    },
-    
-    async sendFriendRequest({ commit, dispatch }, usernameOrId) {
-      commit('SET_LOADING', true)
-      commit('CLEAR_ERROR')
-      
-      try {
-        let userId = usernameOrId;
-        
-        // 检查是否传入的是用户名而不是ID
-        if (isNaN(parseInt(usernameOrId))) {
-          // 如果传入的是用户名，先查找对应的用户ID
-          try {
-            const user = await dispatch('searchUserByUsername', usernameOrId);
-            if (user && user.id) {
-              userId = user.id;
-            } else {
-              throw new Error('找不到该用户');
-            }
-          } catch (searchError) {
-            console.error('Error searching for user:', searchError);
-            throw new Error(`无法找到用户 "${usernameOrId}"，请确认用户名正确`);
+        // 正确解析响应数据
+        let friendsData = [];
+        if (response.data) {
+          if (Array.isArray(response.data)) {
+            friendsData = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            friendsData = response.data.data;
           }
         }
         
-        const response = await friendApi.sendFriendRequest(userId)
-        return response.data
+        console.log('解析后的好友列表:', friendsData, '数量:', friendsData.length);
+        commit('SET_FRIENDS', friendsData);
+        return friendsData;
       } catch (error) {
-        commit('SET_ERROR', error.response?.data?.message || '发送好友请求失败')
-        throw error
+        console.error('获取好友列表失败:', error);
+        commit('SET_ERROR', error.response?.data?.message || '获取好友列表失败');
+        throw error;
       } finally {
-        commit('SET_LOADING', false)
+        commit('SET_LOADING', false);
       }
-    },    async acceptFriendRequest({ commit }, requestId) {
+    },
+      async fetchFriendRequests({ commit }) {
       commit('SET_LOADING', true)
       commit('CLEAR_ERROR')
       
       try {
-        const response = await friendApi.acceptFriendRequest(requestId)
-        // 假设后端返回新添加的好友信息
+        console.log('开始获取好友请求列表...');
+        const response = await friendApi.getFriendRequests();
+        console.log('好友请求列表获取成功:', response.data);
+        
+        let requestsData = [];
         if (response.data) {
-          commit('ADD_FRIEND', response.data)
+          if (Array.isArray(response.data)) {
+            requestsData = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            requestsData = response.data.data;
+          }
         }
-        commit('REMOVE_FRIEND_REQUEST', requestId)
-        return response.data
+        
+        commit('SET_FRIEND_REQUESTS', requestsData);
+        return requestsData;
       } catch (error) {
-        commit('SET_ERROR', error.response?.data?.message || '接受好友请求失败')
-        throw error
+        console.error('获取好友请求列表失败:', error);
+        commit('SET_ERROR', error.response?.data?.message || '获取好友请求失败');
+        throw error;
       } finally {
-        commit('SET_LOADING', false)
+        commit('SET_LOADING', false);
+      }
+    },async searchUserByUsername({ commit }, username) {
+      commit('SET_LOADING', true)
+      commit('CLEAR_ERROR')
+      
+      try {
+        console.log('搜索用户名:', username);
+        const response = await userApi.searchByUsername(username)
+        // The response will be a list of users matching the username
+        const users = response.data
+        console.log('搜索结果:', users);
+        
+        if (!users || users.length === 0) {
+          console.error('找不到用户:', username);
+          throw new Error(`找不到用户 "${username}"`);
+        }
+        
+        // Find exact match first
+        const exactMatch = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+        if (exactMatch) {
+          console.log('找到精确匹配:', exactMatch.username);
+          return exactMatch;
+        }
+        
+        // If no exact match, use the first one
+        console.log('未找到精确匹配，使用第一个结果:', users[0].username);
+        return users[0];
+      } catch (error) {
+        console.error('搜索用户错误:', error);
+        commit('SET_ERROR', error.response?.data?.message || '查找用户失败');
+        throw error;
+      } finally {
+        commit('SET_LOADING', false);
+      }
+    },      async sendFriendRequest({ commit, dispatch }, username) {
+      commit('SET_LOADING', true)
+      commit('CLEAR_ERROR')
+      
+      try {
+        console.log('准备查找用户:', username);
+        
+        // 不管输入的是什么，始终视为用户名进行搜索
+        // 很多用户可能会用数字用户名，如 "123456"
+        let userId;
+        try {
+          const user = await dispatch('searchUserByUsername', username);
+          console.log('搜索结果:', user);
+          if (user && user.id) {
+            userId = user.id;
+            console.log('找到用户ID:', userId);
+          } else {
+            throw new Error('找不到该用户');
+          }
+        } catch (searchError) {
+          console.error('Error searching for user:', searchError);
+          throw new Error(`无法找到用户 "${username}"，请确认用户名正确`);        }
+        
+        // 确保userId是数字
+        if (typeof userId !== 'number' || isNaN(userId) || userId <= 0) {
+          console.error('无效的用户ID:', userId);
+          throw new Error('获取到的用户ID无效');
+        }
+        
+        console.log('准备发送好友请求到用户ID:', userId);
+        const response = await friendApi.sendFriendRequest(userId);
+        console.log('好友请求响应:', response.data);
+        return response.data;
+      } catch (error) {
+        console.error('好友请求错误:', error);
+        commit('SET_ERROR', error.response?.data?.message || '发送好友请求失败');
+        throw error;
+      } finally {
+        commit('SET_LOADING', false);
+      }
+    },    async acceptFriendRequest({ commit, dispatch }, requestId) {
+      commit('SET_LOADING', true)
+      commit('CLEAR_ERROR')
+      
+      try {
+        console.log('开始接受好友请求, 用户ID:', requestId);
+        const response = await friendApi.acceptFriendRequest(requestId);
+        console.log('接受好友请求响应:', response);
+        
+        // 从好友请求列表中移除
+        commit('REMOVE_FRIEND_REQUEST', requestId);
+        
+        // 强制延迟后刷新好友列表，确保后端有时间处理
+        setTimeout(async () => {
+          console.log('延迟刷新好友列表...');
+          await dispatch('fetchFriends');
+          console.log('好友列表刷新完成');
+        }, 500);
+        
+        // 如果后端返回了新好友信息，直接添加到好友列表
+        if (response.data && response.data.data) {
+          console.log('后端返回的新好友信息:', response.data.data);
+          commit('ADD_FRIEND', response.data.data);
+        }
+        
+        console.log('好友请求已接受, 好友关系已建立');
+        return response.data;
+      } catch (error) {
+        console.error('接受好友请求失败:', error);
+        commit('SET_ERROR', error.response?.data?.message || '接受好友请求失败');
+        throw error;
+      } finally {
+        commit('SET_LOADING', false);
       }
     },
     
@@ -691,6 +801,34 @@ export default createStore({
         console.error('Auth check failed:', error)
         commit('CLEAR_AUTH')
         return false
+      }
+    },
+    
+    // 更新用户个人资料
+    async updateProfile({ commit, state }, { bio, profilePicture }) {
+      commit('SET_LOADING', true)
+      commit('CLEAR_ERROR')
+      
+      try {
+        // 调用API更新个人资料
+        await userApi.updateProfile(bio, profilePicture)
+        
+        // 更新本地用户数据
+        const updatedUser = {
+          ...state.user,
+          bio,
+          profilePicture
+        }
+        commit('SET_USER', updatedUser)
+        
+        console.log('个人资料更新成功', updatedUser)
+        return updatedUser
+      } catch (error) {
+        console.error('更新个人资料失败:', error)
+        commit('SET_ERROR', error.response?.data?.message || '更新个人资料失败')
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
       }
     },
   },

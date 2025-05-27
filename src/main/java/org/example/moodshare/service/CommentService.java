@@ -63,6 +63,13 @@ public class CommentService {
             response.setUsername(comment.getUser().getUsername());
             response.setUserId(comment.getUser().getId());
             response.setUserProfilePicture(comment.getUser().getProfilePicture());
+            
+            // 创建用户信息对象
+            CommentResponse.UserInfo userInfo = new CommentResponse.UserInfo();
+            userInfo.setId(comment.getUser().getId());
+            userInfo.setUsername(comment.getUser().getUsername());
+            userInfo.setProfilePicture(comment.getUser().getProfilePicture());
+            response.setUser(userInfo);
         }
         return response;
     }
