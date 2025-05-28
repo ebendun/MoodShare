@@ -160,11 +160,21 @@
                   </div>
                 </div>
               </div>
-              
-              <p class="card-text">
+                <p class="card-text">
                 <span class="mood-emoji">{{ mood.emoji || '😊' }}</span>
                 {{ mood.content }}
               </p>
+              
+              <!-- 心情图片 -->
+              <div v-if="mood.imageUrl" class="mb-3">
+                <SafeImage 
+                  :src="mood.imageUrl" 
+                  alt="心情图片" 
+                  imageClass="img-fluid rounded mood-image" 
+                  style="max-width: 100%; max-height: 400px; cursor: pointer;"
+                  @click="openImageModal(mood.imageUrl)"
+                />
+              </div>
               
               <div v-if="mood.tags && mood.tags.length > 0" class="mb-3">
                 <span v-for="tag in mood.tags" :key="tag" class="mood-tag">
@@ -200,13 +210,22 @@
                     imageClass="rounded-circle me-2" 
                     width="30" 
                     height="30" 
-                  />
-                  <div class="p-2 bg-light rounded flex-grow-1">
+                  />                  <div class="p-2 bg-light rounded flex-grow-1">
                     <div class="d-flex justify-content-between">
                       <strong>{{ comment.user ? comment.user.username : 'Unknown User' }}</strong>
                       <small class="text-muted">{{ formatDate(comment.createdAt) }}</small>
                     </div>
-                    <p class="mb-0">{{ comment.content }}</p>
+                    <p class="mb-1">{{ comment.content }}</p>
+                    
+                    <!-- 评论图片预览 -->
+                    <div v-if="comment.imageUrl" class="mt-1">
+                      <SafeImage 
+                        :src="comment.imageUrl" 
+                        alt="评论图片" 
+                        imageClass="img-thumbnail comment-preview" 
+                        style="max-width: 150px; max-height: 100px; cursor: pointer;"
+                      />
+                    </div>
                   </div>
                 </div>
                 
@@ -227,7 +246,21 @@
           <p class="text-muted">尝试调整筛选条件或发布新的心情。</p>
           <router-link to="/moods/create" class="btn btn-primary mt-2">
             发布心情
-          </router-link>
+          </router-link>        </div>
+      </div>
+    </div>
+    
+    <!-- 图片放大模态框 -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">图片预览</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <img :src="modalImageUrl" class="img-fluid" alt="图片预览" v-if="modalImageUrl">
+          </div>
         </div>
       </div>
     </div>
@@ -235,7 +268,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, nextTick } from 'vue'
 import { useStore } from 'vuex'
 // Removed unused import: useRouter
 import SafeImage from '../components/SafeImage.vue'
@@ -252,9 +285,9 @@ export default {
     const moods = computed(() => store.getters.allMoods)
     const isLoading = computed(() => store.state.loading)
     const currentUser = computed(() => store.getters.currentUser)
-    
-    // 视图控制
+      // 视图控制
     const activeView = ref('all')
+    const modalImageUrl = ref('')
     const viewTitle = computed(() => {
       switch (activeView.value) {
         case 'all': return '全部心情'
@@ -270,8 +303,7 @@ export default {
       privacyLevel: '',
       location: ''
     })
-    
-    // 加载数据
+      // 加载数据
     const loadMoods = async () => {
       switch (activeView.value) {
         case 'all':
@@ -284,6 +316,29 @@ export default {
           await store.dispatch('fetchFriendMoods')
           break
       }
+      
+      // 加载完数据后初始化 Bootstrap 下拉菜单
+      await nextTick()
+      initializeDropdowns()
+    }
+      // 初始化 Bootstrap 下拉菜单
+    const initializeDropdowns = () => {
+      // 检查 Bootstrap 是否已加载
+      if (typeof window.bootstrap === 'undefined') {
+        console.warn('Bootstrap is not loaded yet, skipping dropdown initialization')
+        return
+      }
+      
+      const dropdownElements = document.querySelectorAll('[data-bs-toggle="dropdown"]')
+      dropdownElements.forEach(element => {
+        if (!element._dropdown) {
+          try {
+            element._dropdown = new window.bootstrap.Dropdown(element)
+          } catch (error) {
+            console.warn('Failed to initialize dropdown:', error)
+          }
+        }
+      })
     }
     
     // 切换视图
@@ -341,8 +396,7 @@ export default {
         minute: '2-digit'
       }).format(date)
     }
-    
-    // 获取心情类型名称
+      // 获取心情类型名称
     const getMoodTypeName = (moodType) => {
       const types = {
         'HAPPY': '开心',
@@ -355,17 +409,26 @@ export default {
       return types[moodType] || '未知'
     }
     
-    // 加载初始数据
-    onMounted(() => {
-      loadMoods()
+    // 打开图片模态框
+    const openImageModal = (imageUrl) => {
+      modalImageUrl.value = imageUrl
+      const modal = new window.bootstrap.Modal(document.getElementById('imageModal'))
+      modal.show()
+    }
+      // 加载初始数据
+    onMounted(async () => {
+      await loadMoods()
+      // 确保下拉菜单初始化
+      await nextTick()
+      initializeDropdowns()
     })
-    
-    return {
+      return {
       moods,
       isLoading,
       currentUser,
       activeView,
       viewTitle,
+      modalImageUrl,
       filters,
       switchView,
       applyFilters,
@@ -373,7 +436,8 @@ export default {
       deleteMood,
       updatePrivacy,
       formatDate,
-      getMoodTypeName
+      getMoodTypeName,
+      openImageModal
     }
   }
 }
@@ -386,5 +450,38 @@ export default {
 
 .mood-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mood-image {
+  border: 1px solid #e0e0e0;
+  transition: transform 0.2s ease;
+}
+
+.mood-image:hover {
+  transform: scale(1.02);
+}
+
+.mood-emoji {
+  font-size: 1.2em;
+  margin-right: 0.5em;
+}
+
+.mood-tag {
+  display: inline-block;
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 0.2em 0.5em;
+  border-radius: 12px;
+  font-size: 0.85em;
+  margin-right: 0.5em;
+  margin-bottom: 0.25em;
+}
+
+.mood-type-badge {
+  font-size: 0.8em;
+}
+
+.comment-preview {
+  border: 1px solid #dee2e6;
 }
 </style>

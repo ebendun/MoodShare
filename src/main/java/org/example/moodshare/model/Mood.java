@@ -25,6 +25,8 @@ public class Mood {
     private String content;//存储心情内容
 
     private String emoji;
+    
+    private String imageUrl; // 心情图片URL
 
     @ElementCollection
     private Set<String> tags = Collections.newSetFromMap(new ConcurrentHashMap<>());

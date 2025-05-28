@@ -54,6 +54,36 @@
                 <option value="😎">😎 酷</option>
                 <option value="🤗">🤗 拥抱</option>
               </select>
+            </div>          </div>
+          
+          <!-- 图片上传区域 -->
+          <div class="mb-3">
+            <label class="form-label">添加图片</label>
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <label for="moodImage" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-image"></i> 选择图片
+              </label>
+              <input 
+                type="file" 
+                id="moodImage" 
+                accept="image/*" 
+                @change="handleImageSelect" 
+                class="visually-hidden"
+              >
+              <span v-if="selectedImage" class="text-muted">{{ selectedImage.name }}</span>
+              <button 
+                v-if="selectedImage" 
+                type="button" 
+                @click="removeSelectedImage" 
+                class="btn btn-sm btn-outline-danger"
+              >
+                移除图片
+              </button>
+            </div>
+            
+            <!-- 图片预览 -->
+            <div v-if="imagePreview" class="mt-2">
+              <img :src="imagePreview" alt="预览" class="img-thumbnail" style="max-width: 300px; max-height: 200px;">
             </div>
           </div>
           
@@ -183,15 +213,13 @@
           <div class="d-flex justify-content-between">
             <router-link to="/" class="btn btn-outline-secondary">
               取消
-            </router-link>
-            
-            <button 
+            </router-link>                  <button 
               type="submit" 
               class="btn btn-primary px-4" 
-              :disabled="isLoading || !mood.content"
+              :disabled="isLoading || !mood.content || isUploading"
             >
-              <span v-if="isLoading" class="spinner-border spinner-border-sm me-1"></span>
-              发布
+              <span v-if="isLoading || isUploading" class="spinner-border spinner-border-sm me-1"></span>
+              {{ isUploading ? '上传中...' : (isLoading ? '发布中...' : '发布') }}
             </button>
           </div>
         </form>
@@ -204,6 +232,7 @@
 import { reactive, ref, computed } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
+import { fileApi } from '@/api/api'
 
 export default {
   name: 'MoodCreateView',
@@ -225,9 +254,13 @@ export default {
       weather: '',
       privacyLevel: 'PUBLIC'
     })
-    
-    // 标签输入
+      // 标签输入
     const tagInput = ref('')
+    
+    // 图片上传相关状态
+    const selectedImage = ref(null)
+    const imagePreview = ref('')
+    const isUploading = ref(false)
     
     // 心情类型选项
     const moodTypes = [
@@ -294,26 +327,87 @@ export default {
         alert('您的浏览器不支持地理定位功能。')
       }
     }
-    
-    // 提交表单
+      // 提交表单
     const handleSubmit = async () => {
       try {
-        await store.dispatch('createMood', mood)
+        isUploading.value = true
+        let imageUrl = null
+        
+        // 如果有选择图片，先上传图片
+        if (selectedImage.value) {
+          const uploadResponse = await fileApi.uploadMoodImage(selectedImage.value)
+          if (uploadResponse.data && uploadResponse.data.success) {
+            imageUrl = uploadResponse.data.url
+          }
+        }
+        
+        // 添加图片URL到心情数据
+        const moodData = { ...mood }
+        if (imageUrl) {
+          moodData.imageUrl = imageUrl
+        }
+        
+        await store.dispatch('createMood', moodData)
         router.push('/')
       } catch (error) {
         console.error('Error creating mood:', error)
+        alert('发布失败：' + (error.response?.data?.message || error.message))
+      } finally {
+        isUploading.value = false
       }
     }
     
-    return {
+    // 处理图片选择
+    const handleImageSelect = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        // 验证文件类型
+        if (!file.type.startsWith('image/')) {
+          alert('请选择图片文件')
+          return
+        }
+        
+        // 验证文件大小 (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('图片大小不能超过5MB')
+          return
+        }
+        
+        selectedImage.value = file
+        
+        // 创建预览
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          imagePreview.value = e.target.result
+        }
+        reader.readAsDataURL(file)
+      }
+    }
+    
+    // 移除选择的图片
+    const removeSelectedImage = () => {
+      selectedImage.value = null
+      imagePreview.value = ''
+      // 清空file input
+      const fileInput = document.getElementById('moodImage')
+      if (fileInput) {
+        fileInput.value = ''
+      }
+    }
+      return {
       mood,
       tagInput,
       moodTypes,
       isLoading,
+      selectedImage,
+      imagePreview,
+      isUploading,
       addTag,
       removeTag,
       getCurrentLocation,
-      handleSubmit
+      handleSubmit,
+      handleImageSelect,
+      removeSelectedImage
     }
   }
 }

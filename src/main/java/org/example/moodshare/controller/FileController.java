@@ -125,4 +125,54 @@ public class FileController {
             ));
         }
     }
+    
+    /**
+     * 上传评论图片
+     */
+    @PostMapping("/upload/comment")
+    public ResponseEntity<?> uploadCommentImage(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam("file") MultipartFile file) {
+        
+        if (userDetails == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "未登录"
+            ));
+        }
+        
+        try {
+            // 确保目录存在
+            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            
+            // 生成唯一文件名
+            String filename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            
+            // 保存文件
+            Path targetLocation = uploadPath.resolve(filename);
+            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            
+            // 构建文件URL
+            String fileUrl = "/uploads/" + filename;
+            
+            logger.info("用户 {} 上传评论图片成功: {}", userDetails.getUsername(), fileUrl);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "评论图片上传成功");
+            response.put("url", fileUrl);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (IOException ex) {
+            logger.error("上传评论图片失败: {}", ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "上传评论图片失败: " + ex.getMessage()
+            ));
+        }
+    }
 }

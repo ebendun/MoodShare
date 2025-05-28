@@ -7,6 +7,7 @@ import MoodCreateView from '../views/MoodCreateView.vue'
 import MoodEditView from '../views/MoodEditView.vue'
 import MoodDetailView from '../views/MoodDetailView.vue'
 import FriendsView from '../views/FriendsView.vue'
+import AboutView from '../views/AboutView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
 const routes = [
@@ -56,6 +57,11 @@ const routes = [
     name: 'friends',
     component: FriendsView,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/about',
+    name: 'about',
+    component: AboutView
   },
   {
     path: '/user/:id',

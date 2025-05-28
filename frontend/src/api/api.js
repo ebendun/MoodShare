@@ -59,11 +59,19 @@ export const fileApi = {
         'Content-Type': 'multipart/form-data'
       }
     });
-  },
-  uploadMoodImage: (file) => {
+  },  uploadMoodImage: (file) => {
     const formData = new FormData();
     formData.append('file', file);
     return api.post('/files/upload/mood', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+  uploadCommentImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/files/upload/comment', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -80,8 +88,7 @@ export const moodApi = {
     if (location) params.location = location;
     return api.get('/moods', { params });
   },//获取心情列表
-  getMoodById: (id) => api.get(`/moods/${id}`),
-  getUserMoods: () => {
+  getMoodById: (id) => api.get(`/moods/${id}`),  getUserMoods: () => {
     console.log('API 调用: getUserMoods');
     return api.get('/moods/user')
       .then(response => {
@@ -101,7 +108,13 @@ export const moodApi = {
   getFriendsMoods: () => api.get('/moods/friends'),
   getNearbyMoods: (latitude, longitude, radiusKm = 10) => 
     api.get(`/moods/nearby?latitude=${latitude}&longitude=${longitude}&radiusKm=${radiusKm}`),
-  addComment: (moodId, content) => api.post(`/moods/${moodId}/comments`, { content }),
+  addComment: (moodId, content, imageUrl = null) => {
+    const commentData = { content };
+    if (imageUrl) {
+      commentData.imageUrl = imageUrl;
+    }
+    return api.post(`/moods/${moodId}/comments`, commentData);
+  },
   getComments: (moodId) => api.get(`/moods/${moodId}/comments`),
   deleteComment: (moodId, commentId) => api.delete(`/moods/${moodId}/comments/${commentId}`),
   updatePrivacy: (moodId, privacyLevel) => api.put(`/moods/${moodId}/privacy?privacyLevel=${privacyLevel}`)

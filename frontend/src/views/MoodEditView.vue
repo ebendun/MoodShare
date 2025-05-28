@@ -62,6 +62,56 @@
                 <option value="😎">😎 酷</option>
                 <option value="🤗">🤗 拥抱</option>
               </select>
+            </div>          </div>
+          
+          <!-- 图片上传区域 -->
+          <div class="mb-3">
+            <label class="form-label">心情图片</label>
+            
+            <!-- 当前图片显示 -->
+            <div v-if="mood.imageUrl" class="mb-2">
+              <p class="text-muted small">当前图片：</p>
+              <SafeImage 
+                :src="mood.imageUrl" 
+                alt="当前心情图片" 
+                imageClass="img-thumbnail" 
+                style="max-width: 200px; max-height: 150px;"
+              />
+              <button 
+                type="button" 
+                @click="removeCurrentImage" 
+                class="btn btn-sm btn-outline-danger ms-2"
+              >
+                移除当前图片
+              </button>
+            </div>
+            
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <label for="moodEditImage" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-image"></i> {{ mood.imageUrl ? '更换图片' : '添加图片' }}
+              </label>
+              <input 
+                type="file" 
+                id="moodEditImage" 
+                accept="image/*" 
+                @change="handleImageSelect" 
+                class="visually-hidden"
+              >
+              <span v-if="selectedImage" class="text-muted">{{ selectedImage.name }}</span>
+              <button 
+                v-if="selectedImage" 
+                type="button" 
+                @click="removeSelectedImage" 
+                class="btn btn-sm btn-outline-danger"
+              >
+                取消选择
+              </button>
+            </div>
+            
+            <!-- 新图片预览 -->
+            <div v-if="imagePreview" class="mt-2">
+              <p class="text-muted small">新图片预览：</p>
+              <img :src="imagePreview" alt="预览" class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
             </div>
           </div>
           
@@ -212,9 +262,14 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
+import { fileApi } from '@/api/api'
+import SafeImage from '@/components/SafeImage.vue'
 
 export default {
   name: 'MoodEditView',
+  components: {
+    SafeImage
+  },
   props: {
     id: {
       type: String,
@@ -240,9 +295,13 @@ export default {
       weather: '',
       privacyLevel: 'PUBLIC'
     })
-    
-    // 标签输入
+      // 标签输入
     const tagInput = ref('')
+    
+    // 图片上传相关状态
+    const selectedImage = ref(null)
+    const imagePreview = ref('')
+    const isUploading = ref(false)
     
     // 心情类型选项
     const moodTypes = [
@@ -258,12 +317,12 @@ export default {
     onMounted(async () => {
       try {
         const response = await store.dispatch('fetchMoodById', props.id)
-        
-        // 将加载的数据填充到表单中
+          // 将加载的数据填充到表单中
         if (response) {
           Object.assign(mood, {
             content: response.content || '',
             emoji: response.emoji || '',
+            imageUrl: response.imageUrl || '', // 加载心情图片
             tags: response.tags || [],
             location: response.location || '',
             latitude: response.latitude || null,
@@ -334,33 +393,98 @@ export default {
         alert('您的浏览器不支持地理定位功能。')
       }
     }
-    
-    // 提交表单
+      // 提交表单
     const handleSubmit = async () => {
       isSubmitting.value = true
       
       try {
+        let imageUrl = mood.imageUrl // 保持原有图片
+        
+        // 如果有选择新图片，先上传图片
+        if (selectedImage.value) {
+          isUploading.value = true
+          const uploadResponse = await fileApi.uploadMoodImage(selectedImage.value)
+          if (uploadResponse.data && uploadResponse.data.success) {
+            imageUrl = uploadResponse.data.url
+          }
+        }
+        
+        // 准备更新数据
+        const moodData = { ...mood }
+        moodData.imageUrl = imageUrl
+        
         await store.dispatch('updateMood', {
           moodId: props.id,
-          moodData: mood
+          moodData: moodData
         })
         router.push(`/moods/${props.id}`)
       } catch (error) {
         console.error('Error updating mood:', error)
+        alert('更新失败：' + (error.response?.data?.message || error.message))
       } finally {
         isSubmitting.value = false
+        isUploading.value = false
       }
     }
-      return {
+    
+    // 处理图片选择
+    const handleImageSelect = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        // 验证文件类型
+        if (!file.type.startsWith('image/')) {
+          alert('请选择图片文件')
+          return
+        }
+        
+        // 验证文件大小 (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          alert('图片大小不能超过5MB')
+          return
+        }
+        
+        selectedImage.value = file
+        
+        // 创建预览
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          imagePreview.value = e.target.result
+        }
+        reader.readAsDataURL(file)
+      }
+    }
+    
+    // 移除选择的新图片
+    const removeSelectedImage = () => {
+      selectedImage.value = null
+      imagePreview.value = ''
+      // 清空file input
+      const fileInput = document.getElementById('moodEditImage')
+      if (fileInput) {
+        fileInput.value = ''
+      }
+    }
+      // 移除当前图片
+    const removeCurrentImage = () => {
+      mood.imageUrl = ''
+    }
+    
+    return {
       mood,
       tagInput,
       moodTypes,
       isLoading,
       isSubmitting,
+      selectedImage,
+      imagePreview,
+      isUploading,
       addTag,
       removeTag,
       getCurrentLocation,
-      handleSubmit
+      handleSubmit,
+      handleImageSelect,
+      removeSelectedImage,
+      removeCurrentImage
     }
   }
 }

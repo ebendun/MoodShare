@@ -13,6 +13,7 @@ public class MoodResponse {
     private Long id;
     private String content;
     private String emoji;
+    private String imageUrl; // 心情图片URL
     private Set<String> tags;
     private LocalDateTime createdAt;
     private UserDto user;
@@ -45,6 +46,7 @@ public class MoodResponse {
     public static class CommentDto {
         private Long id;
         private String content;
+        private String imageUrl; // 评论图片URL
         private LocalDateTime createdAt;
         private UserDto user;
     }

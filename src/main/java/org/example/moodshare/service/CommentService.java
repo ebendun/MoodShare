@@ -44,6 +44,7 @@ public class CommentService {
 
         Comment comment = new Comment();
         comment.setContent(request.getContent());
+        comment.setImageUrl(request.getImageUrl()); // 设置图片URL
         comment.setUser(user);
         comment.setMood(mood);
         comment.setCreatedAt(LocalDateTime.now());

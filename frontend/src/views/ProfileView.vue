@@ -1,4 +1,5 @@
-<template>  <div class="profile-view">
+<template>
+  <div class="profile-view">
     <h2 class="mb-4">{{ isOwnProfile ? '个人资料' : user.username + ' 的资料' }}</h2>
     
     <div class="row">

@@ -17,6 +17,7 @@ public class Comment {
     private Long id;
 
     private String content; // 评论内容
+    private String imageUrl; // 评论图片URL
     private LocalDateTime createdAt = LocalDateTime.now();// 评论时间
 
     @ManyToOne(fetch = FetchType.EAGER)

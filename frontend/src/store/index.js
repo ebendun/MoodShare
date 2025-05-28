@@ -44,9 +44,17 @@ export default createStore({
     },
     SET_MOODS(state, moods) {
       state.moods = moods
-    },
-    SET_MOOD(state, mood) {
+    },    SET_MOOD(state, mood) {
+      console.log('[Mutation] SET_MOOD - Received mood:', mood)
+      console.log('[Mutation] SET_MOOD - Comments in received mood:', mood?.comments)
+      // Ensure comments is always an array
+      if (mood) {
+        mood.comments = mood.comments || []
+        console.log('[Mutation] SET_MOOD - Comments after ensuring array:', mood.comments)
+      }
       state.mood = mood
+      console.log('[Mutation] SET_MOOD - State mood set to:', state.mood)
+      console.log('[Mutation] SET_MOOD - Final comments in state:', state.mood?.comments)
     },
     ADD_MOOD(state, mood) {
       state.moods.unshift(mood)
@@ -122,19 +130,30 @@ export default createStore({
     },
     CLEAR_ERROR(state) {
       state.error = null
-    },
-    ADD_COMMENT_TO_MOOD(state, { moodId, comment }) {
+    },    ADD_COMMENT_TO_MOOD(state, { moodId, comment }) {
+      console.log('[Mutation] ADD_COMMENT_TO_MOOD - Adding comment to moodId:', moodId)
+      console.log('[Mutation] ADD_COMMENT_TO_MOOD - Comment to add:', comment)
+      console.log('[Mutation] ADD_COMMENT_TO_MOOD - Current state.mood:', state.mood)
+      console.log('[Mutation] ADD_COMMENT_TO_MOOD - Current state.mood.id:', state.mood?.id)
+      
       // 添加评论到指定心情
       if (state.mood && state.mood.id === moodId) {
+        console.log('[Mutation] ADD_COMMENT_TO_MOOD - Adding to current mood')
         if (!state.mood.comments) state.mood.comments = []
+        console.log('[Mutation] ADD_COMMENT_TO_MOOD - Comments before push:', state.mood.comments)
         state.mood.comments.push(comment)
+        console.log('[Mutation] ADD_COMMENT_TO_MOOD - Comments after push:', state.mood.comments)
+      } else {
+        console.log('[Mutation] ADD_COMMENT_TO_MOOD - Not adding to current mood (ID mismatch or no mood)')
       }
       
       // 更新心情列表中的心情
       const moodIndex = state.moods.findIndex(m => m.id === moodId)
+      console.log('[Mutation] ADD_COMMENT_TO_MOOD - Mood index in list:', moodIndex)
       if (moodIndex !== -1) {
         if (!state.moods[moodIndex].comments) state.moods[moodIndex].comments = []
         state.moods[moodIndex].comments.push(comment)
+        console.log('[Mutation] ADD_COMMENT_TO_MOOD - Added to mood list at index:', moodIndex)
       }
     },
     UPDATE_MOOD_LIKE(state, { moodId, liked }) {
@@ -312,27 +331,34 @@ export default createStore({
       } finally {
         commit('SET_LOADING', false)
       }
-    },
-      async fetchMoodById({ commit }, moodId) {
+    },    async fetchMoodById({ commit }, moodId) {
+      console.log('[Store] fetchMoodById - Starting for moodId:', moodId)
       commit('SET_LOADING', true)
       commit('CLEAR_ERROR')
       
       try {
+        console.log('[Store] fetchMoodById - Calling moodApi.getMoodById')
         const moodResponse = await moodApi.getMoodById(moodId)
+        console.log('[Store] fetchMoodById - Mood API response:', moodResponse.data)
         const mood = moodResponse.data
         
         // 获取评论列表
         try {
+          console.log('[Store] fetchMoodById - Fetching comments for moodId:', moodId)
           const commentsResponse = await moodApi.getComments(moodId)
+          console.log('[Store] fetchMoodById - Comments API response:', commentsResponse.data)
           mood.comments = commentsResponse.data
+          console.log('[Store] fetchMoodById - Comments attached to mood:', mood.comments)
         } catch (commentError) {
-          console.error('Error fetching comments:', commentError)
+          console.error('[Store] fetchMoodById - Error fetching comments:', commentError)
           mood.comments = []
         }
         
+        console.log('[Store] fetchMoodById - Final mood object before commit:', mood)
         commit('SET_MOOD', mood)
         return mood
       } catch (error) {
+        console.error('[Store] fetchMoodById - Error:', error)
         commit('SET_ERROR', error.response?.data?.message || '获取心情详情失败')
         throw error
       } finally {
@@ -429,16 +455,19 @@ export default createStore({
         commit('SET_ERROR', error.response?.data?.message || '点赞操作失败')
         throw error
       }
-    },
-      async addComment({ commit }, { moodId, content }) {
+    },    async addComment({ commit }, { moodId, content, imageUrl = null }) {
+      console.log('[Store] addComment - Starting with:', { moodId, content, imageUrl })
       commit('CLEAR_ERROR')
       
       try {
-        const response = await moodApi.addComment(moodId, content)
+        const response = await moodApi.addComment(moodId, content, imageUrl)
+        console.log('[Store] addComment - API response:', response.data)
         const comment = response.data
+        console.log('[Store] addComment - Committing ADD_COMMENT_TO_MOOD with:', { moodId, comment })
         commit('ADD_COMMENT_TO_MOOD', { moodId, comment })
         return comment
       } catch (error) {
+        console.error('[Store] addComment - Error:', error)
         commit('SET_ERROR', error.response?.data?.message || '添加评论失败')
         throw error
       }

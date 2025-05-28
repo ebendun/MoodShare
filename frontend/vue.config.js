@@ -3,7 +3,8 @@ module.exports = {
   
   // 开发服务器配置
   devServer: {
-    port: 8081, // 使用不同于后端的端口
+    port: 8082, // 强制使用固定端口8082
+    host: 'localhost',
     proxy: {
       // 代理所有API请求到后端
       '/auth': {

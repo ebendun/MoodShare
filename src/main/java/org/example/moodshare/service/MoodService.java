@@ -58,6 +58,7 @@ public class MoodService {
     private  void prepareMoodEntity(Mood mood, MoodCreateRequest request) {
         mood.setContent(request.getContent());
         mood.setEmoji(request.getEmoji());
+        mood.setImageUrl(request.getImageUrl()); // 设置心情图片URL
         mood.setTags(request.getTags());
         mood.setPrivacyLevel(request.getPrivacyLevel());
         mood.setLocation(request.getLocation());
@@ -373,6 +374,7 @@ public class MoodService {
         response.setId(mood.getId());
         response.setContent(mood.getContent());
         response.setEmoji(mood.getEmoji());
+        response.setImageUrl(mood.getImageUrl()); // 设置心情图片URL
         response.setTags(mood.getTags());
 
         // 设置点赞信息
@@ -410,6 +412,7 @@ public class MoodService {
         MoodResponse.CommentDto commentDto = new MoodResponse.CommentDto();
         commentDto.setId(comment.getId());
         commentDto.setContent(comment.getContent());
+        commentDto.setImageUrl(comment.getImageUrl()); // 设置评论图片URL
         commentDto.setCreatedAt(comment.getCreatedAt());
 
         // 设置评论用户信息

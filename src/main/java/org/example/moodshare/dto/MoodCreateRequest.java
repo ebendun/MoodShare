@@ -10,6 +10,7 @@ import java.util.Set;
 public class MoodCreateRequest {
     private String content;
     private String emoji;
+    private String imageUrl; // 心情图片URL
     private Set<String> tags;
     
     // 新增隐私设置
