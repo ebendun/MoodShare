@@ -341,14 +341,26 @@ export default createStore({
         const moodResponse = await moodApi.getMoodById(moodId)
         console.log('[Store] fetchMoodById - Mood API response:', moodResponse.data)
         const mood = moodResponse.data
-        
-        // 获取评论列表
+          // 获取评论列表
         try {
           console.log('[Store] fetchMoodById - Fetching comments for moodId:', moodId)
           const commentsResponse = await moodApi.getComments(moodId)
           console.log('[Store] fetchMoodById - Comments API response:', commentsResponse.data)
-          mood.comments = commentsResponse.data
-          console.log('[Store] fetchMoodById - Comments attached to mood:', mood.comments)
+          
+          // 检查响应是否是分页对象
+          if (commentsResponse.data && typeof commentsResponse.data === 'object' && commentsResponse.data.content) {
+            // 分页响应，提取 content 数组
+            mood.comments = commentsResponse.data.content
+            console.log('[Store] fetchMoodById - Extracted comments from paginated response:', mood.comments)
+          } else if (Array.isArray(commentsResponse.data)) {
+            // 直接是数组
+            mood.comments = commentsResponse.data
+            console.log('[Store] fetchMoodById - Comments are direct array:', mood.comments)
+          } else {
+            // 其他情况，设为空数组
+            mood.comments = []
+            console.log('[Store] fetchMoodById - Comments fallback to empty array')
+          }
         } catch (commentError) {
           console.error('[Store] fetchMoodById - Error fetching comments:', commentError)
           mood.comments = []
@@ -443,6 +455,36 @@ export default createStore({
       }
     },
     
+    async fetchUserMoodsByUserId({ commit }, userId) {
+      commit('SET_LOADING', true)
+      commit('CLEAR_ERROR')
+      
+      try {
+        console.log('开始获取指定用户心情, userId:', userId);
+        const response = await moodApi.getUserMoodsByUserId(userId);
+        console.log('指定用户心情获取成功:', response);
+        
+        // 正确解析响应数据
+        let moodsData = [];
+        if (response.data) {
+          if (Array.isArray(response.data)) {
+            moodsData = response.data;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            moodsData = response.data.data;
+          }
+        }
+        
+        console.log('解析后的指定用户心情:', moodsData, '数量:', moodsData.length);
+        return moodsData;
+      } catch (error) {
+        console.error('获取指定用户心情失败:', error);
+        commit('SET_ERROR', error.response?.data?.message || '获取用户心情失败');
+        throw error;
+      } finally {
+        commit('SET_LOADING', false);
+      }
+    },
+    
     async toggleLike({ commit }, moodId) {
       commit('CLEAR_ERROR')
       
@@ -472,13 +514,23 @@ export default createStore({
         throw error
       }
     },
-    
-    async getComments({ commit }, moodId) {
+      async getComments({ commit }, moodId) {
       commit('CLEAR_ERROR')
       
       try {
         const response = await moodApi.getComments(moodId)
-        return response.data
+        
+        // 检查响应是否是分页对象
+        if (response.data && typeof response.data === 'object' && response.data.content) {
+          // 分页响应，返回 content 数组
+          return response.data.content
+        } else if (Array.isArray(response.data)) {
+          // 直接是数组
+          return response.data
+        } else {
+          // 其他情况，返回空数组
+          return []
+        }
       } catch (error) {
         commit('SET_ERROR', error.response?.data?.message || '获取评论失败')
         throw error
@@ -677,7 +729,7 @@ export default createStore({
         commit('SET_ERROR', error.response?.data?.message || '接受好友请求失败');
         throw error;
       } finally {
-        commit('SET_LOADING', false);
+        commit('SET_LOADING', false)
       }
     },
     
@@ -849,12 +901,38 @@ export default createStore({
           profilePicture
         }
         commit('SET_USER', updatedUser)
-        
-        console.log('个人资料更新成功', updatedUser)
+          console.log('个人资料更新成功', updatedUser)
         return updatedUser
       } catch (error) {
         console.error('更新个人资料失败:', error)
         commit('SET_ERROR', error.response?.data?.message || '更新个人资料失败')
+        throw error
+      } finally {
+        commit('SET_LOADING', false)
+      }
+    },
+
+    // 修改密码
+    async changePassword({ commit }, { oldPassword, newPassword }) {
+      commit('SET_LOADING', true)
+      commit('CLEAR_ERROR')
+      
+      try {
+        console.log('开始修改密码...')
+        const response = await userApi.changePassword(oldPassword, newPassword)
+        
+        if (response.data && response.data.success) {
+          console.log('密码修改成功')
+          alert('密码修改成功！')
+          return response.data
+        } else {
+          throw new Error(response.data?.message || '密码修改失败')
+        }
+      } catch (error) {
+        console.error('修改密码失败:', error)
+        const errorMessage = error.response?.data?.message || '修改密码失败'
+        commit('SET_ERROR', errorMessage)
+        alert(errorMessage)
         throw error
       } finally {
         commit('SET_LOADING', false)

@@ -109,14 +109,13 @@
                 立即发布
               </router-link>
             </div>
-          </div>
-        </div>
+          </div>        </div>
         
-        <div class="card">
+        <!-- 好友列表 - 仅在查看自己的资料时显示 -->
+        <div v-if="isOwnProfile" class="card">
           <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">{{ isOwnProfile ? '好友' : 'TA的好友' }}</h5>
+            <h5 class="mb-0">好友</h5>
             <router-link 
-              v-if="isOwnProfile"
               to="/friends" 
               class="btn btn-sm btn-outline-primary"
             >
@@ -148,23 +147,17 @@
               
               <div v-if="friends.length > 5" class="text-center mt-3">
                 <router-link 
-                  v-if="isOwnProfile"
                   to="/friends" 
                   class="btn btn-sm btn-link"
                 >
                   查看全部 {{ friends.length }} 位好友
                 </router-link>
-                <span v-else class="text-muted">
-                  共 {{ friends.length }} 位好友
-                </span>
-              </div>
-            </div>
+              </div>            </div>
             
             <!-- 无好友提示 -->
             <div v-else class="text-center py-4">
-              <p class="text-muted">{{ isOwnProfile ? '您还没有添加任何好友。' : 'TA还没有添加任何好友。' }}</p>
+              <p class="text-muted">您还没有添加任何好友。</p>
               <router-link 
-                v-if="isOwnProfile"
                 to="/friends" 
                 class="btn btn-primary mt-2"
               >
@@ -393,12 +386,20 @@ export default {
       return profileForm.bio !== (user.value.bio || '') || 
              profileForm.profilePicture !== (user.value.profilePicture || '')
     })
-    
-    // 加载用户心情数据
+      // 加载用户心情数据
     const loadUserMoods = async () => {
       loadingMoods.value = true
       try {
-        const response = await store.dispatch('fetchUserMoods')
+        let response
+        if (isOwnProfile.value) {
+          // 查看自己的资料，使用当前用户的心情API
+          console.log('加载自己的心情...')
+          response = await store.dispatch('fetchUserMoods')
+        } else {
+          // 查看其他用户的资料，使用指定用户ID的心情API
+          console.log('加载指定用户的心情, userId:', props.id)
+          response = await store.dispatch('fetchUserMoodsByUserId', props.id)
+        }
         userMoods.value = response || []
         console.log('用户心情加载成功:', userMoods.value)
       } catch (error) {
@@ -407,9 +408,14 @@ export default {
         loadingMoods.value = false
       }
     }
-    
-    // 加载用户好友数据
+      // 加载用户好友数据
     const loadUserFriends = async () => {
+      // 只有在查看自己的资料时才加载好友数据
+      if (!isOwnProfile.value) {
+        console.log('不是自己的资料，跳过加载好友数据')
+        return
+      }
+      
       loadingFriends.value = true
       try {
         const response = await store.dispatch('fetchFriends')
@@ -474,8 +480,9 @@ export default {
           const userData = await store.dispatch('fetchUserById', props.id)
           targetUser.value = userData
           
-          // 暂时不加载其他用户的心情和好友列表
-          // 如果需要的话，可以在后端添加相应的API
+          // 加载其他用户的心情数据
+          loadUserMoods()
+          // 注意：不加载其他用户的好友列表，只显示自己的好友
         }
       } catch (error) {
         console.error('Error loading user data:', error)

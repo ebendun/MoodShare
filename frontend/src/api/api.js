@@ -45,6 +45,7 @@ export const userApi = {
   getProfile: () => api.get('/auth/me'),//获取用户信息
   getUserById: (userId) => api.get(`/auth/users/${userId}`),//获取指定用户信息
   updateProfile: (bio, profilePicture) => api.put('/auth/profile', { bio, profilePicture }),//更新用户信息
+  changePassword: (oldPassword, newPassword) => api.put('/auth/change-password', { oldPassword, newPassword }),//修改密码
   checkStatus: () => api.get('/auth/status'),//检查用户状态
   searchByUsername: (username) => api.get(`/auth/users/search?username=${encodeURIComponent(username)}`)
 };
@@ -97,6 +98,18 @@ export const moodApi = {
       })
       .catch(error => {
         console.error('获取用户心情API错误:', error.response?.data);
+        throw error;
+      });
+  },
+  getUserMoodsByUserId: (userId) => {
+    console.log('API 调用: getUserMoodsByUserId, userId:', userId);
+    return api.get(`/moods/user/${userId}`)
+      .then(response => {
+        console.log('获取指定用户心情成功:', response);
+        return response;
+      })
+      .catch(error => {
+        console.error('获取指定用户心情API错误:', error.response?.data);
         throw error;
       });
   },

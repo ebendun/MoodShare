@@ -60,16 +60,27 @@ public class UserService {
      * 修改用户密码
      */
     public User changePassword(String username, String oldPassword, String newPassword) {
+        System.out.println("开始修改密码 - 用户名: " + username);
         User user = getUserByUsername(username);
+        System.out.println("找到用户: " + user.getUsername() + ", 当前密码哈希: " + user.getPassword());
         
         // 验证旧密码是否正确
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            System.out.println("旧密码验证失败");
             throw new org.springframework.security.authentication.BadCredentialsException("旧密码不正确");
         }
+        System.out.println("旧密码验证成功");
         
         // 更新密码
-        user.setPassword(passwordEncoder.encode(newPassword));
-        return userRepository.save(user);
+        String oldPasswordHash = user.getPassword();
+        String newPasswordHash = passwordEncoder.encode(newPassword);
+        user.setPassword(newPasswordHash);
+        System.out.println("旧密码哈希: " + oldPasswordHash);
+        System.out.println("新密码哈希: " + newPasswordHash);
+        
+        User savedUser = userRepository.save(user);
+        System.out.println("密码修改完成，保存后的密码哈希: " + savedUser.getPassword());
+        return savedUser;
     }
     
     /**

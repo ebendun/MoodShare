@@ -137,20 +137,12 @@
             </div>
           </div>
         </div>
-          <!-- 评论区 -->
-        <div class="card">
+          <!-- 评论区 -->        <div class="card">
           <div class="card-header bg-white">
             <h5 class="mb-0">评论 ({{ mood.comments?.length || 0 }})</h5>
-            <!-- 调试信息 -->
-            <div class="small text-muted mt-1">
-              <div>调试: mood存在: {{ !!mood }}</div>
-              <div>调试: comments类型: {{ typeof mood?.comments }} ({{ Array.isArray(mood?.comments) ? 'Array' : 'Not Array' }})</div>
-              <div>调试: comments长度: {{ mood?.comments?.length }}</div>
-              <div>调试: comments内容: {{ JSON.stringify(mood?.comments) }}</div>
-            </div>
           </div>
           
-          <div class="card-body">            <!-- 添加评论 -->
+          <div class="card-body"><!-- 添加评论 -->
             <div class="mb-4">
               <form @submit.prevent="addComment">
                 <div class="mb-3">
@@ -328,14 +320,8 @@ export default {
     const imagePreview = ref('')
     const isUploading = ref(false)
     const showImagePreview = ref(false)
-    const previewImageUrl = ref('')
-      // 获取状态
+    const previewImageUrl = ref('')    // 获取状态
     const mood = computed(() => {
-      console.log('🔍 MoodDetailView - Current mood from store:', store.state.mood)
-      if (store.state.mood) {
-        console.log('🔍 MoodDetailView - Mood comments:', store.state.mood.comments)
-        console.log('🔍 MoodDetailView - Comments length:', store.state.mood.comments?.length)
-      }
       return store.state.mood
     })
     const currentUser = computed(() => store.state.user)
@@ -361,15 +347,10 @@ export default {
           }
         })
       }
-    }
-      // 加载心情详情
+    }    // 加载心情详情
     onMounted(async () => {
-      console.log('[MoodDetailView] onMounted - Fetching mood with ID:', props.id)
       try {
-        const result = await store.dispatch('fetchMoodById', props.id)
-        console.log('[MoodDetailView] Mood fetched successfully:', result)
-        console.log('[MoodDetailView] Current mood state:', mood.value)
-        console.log('[MoodDetailView] Comments in mood:', mood.value?.comments)
+        await store.dispatch('fetchMoodById', props.id)
         
         // 心情加载完成后初始化下拉菜单
         await nextTick()

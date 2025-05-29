@@ -3,6 +3,7 @@ package org.example.moodshare.controller;
 import org.example.moodshare.dto.UserRegistrationRequest;
 import org.example.moodshare.dto.UserLoginRequest;
 import org.example.moodshare.dto.UserProfileUpdateRequest;
+import org.example.moodshare.dto.PasswordChangeRequest;
 import org.example.moodshare.model.User;
 import org.example.moodshare.service.UserService;
 import org.example.moodshare.util.JwtUtil;
@@ -209,6 +210,49 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false, 
                     "message", "获取用户信息失败: " + e.getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * 修改密码
+     */
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody PasswordChangeRequest request) {
+        logger.debug("修改密码请求: user={}", userDetails != null ? userDetails.getUsername() : "未登录");
+        
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "success", false,
+                    "message", "未登录"
+            ));
+        }
+        
+        try {
+            User user = userService.changePassword(
+                    userDetails.getUsername(), 
+                    request.getOldPassword(), 
+                    request.getNewPassword()
+            );
+            
+            logger.info("用户密码修改成功: {}", user.getUsername());
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "密码修改成功"
+            ));
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            logger.warn("密码修改失败 - 旧密码错误: user={}", userDetails.getUsername());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "旧密码不正确"
+            ));
+        } catch (Exception e) {
+            logger.error("密码修改失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false,
+                    "message", "密码修改失败: " + e.getMessage()
             ));
         }
     }
