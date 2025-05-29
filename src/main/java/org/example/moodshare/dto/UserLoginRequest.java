@@ -9,4 +9,6 @@ import lombok.Setter;
 public class UserLoginRequest {
     private String username;
     private String password;
+    private String captchaCode;
+    private String sessionId;
 }

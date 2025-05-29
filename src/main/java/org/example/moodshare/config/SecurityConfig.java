@@ -43,7 +43,9 @@ public class SecurityConfig {
     private static final String[] PUBLIC_AUTH_PATHS = {
             "/auth/login",
             "/auth/register",
-            "/auth/status"
+            "/auth/status",
+            "/auth/captcha",
+            "/auth/captcha/verify"
     };
 
     private static final String[] PUBLIC_API_PATHS = {

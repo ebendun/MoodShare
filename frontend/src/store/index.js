@@ -176,12 +176,12 @@ export default createStore({
     }  },
 
   actions: {    // 认证相关
-    async login({ commit, dispatch }, { username, password }) {
+    async login({ commit, dispatch }, { username, password, captchaCode, sessionId }) {
       commit('SET_LOADING', true)
       commit('CLEAR_ERROR')
       try {
         console.log('Attempting login for user:', username);
-        const response = await userApi.login(username, password)
+        const response = await userApi.login(username, password, captchaCode, sessionId)
         console.log('Login response:', response);
         
         if (!response.data || !response.data.token) {
@@ -231,13 +231,12 @@ export default createStore({
         commit('SET_LOADING', false)
       }
     },
-    
-    async register({ commit }, { username, email, password }) {
+      async register({ commit }, { username, email, password, captchaCode, sessionId }) {
       commit('SET_LOADING', true)
       commit('CLEAR_ERROR')
       
       try {
-        const response = await userApi.register(username, email, password)
+        const response = await userApi.register(username, email, password, captchaCode, sessionId)
         return response.data
       } catch (error) {
         commit('SET_ERROR', error.response?.data?.message || '注册失败，请检查输入信息')

@@ -6,6 +6,7 @@ import org.example.moodshare.dto.UserProfileUpdateRequest;
 import org.example.moodshare.dto.PasswordChangeRequest;
 import org.example.moodshare.model.User;
 import org.example.moodshare.service.UserService;
+import org.example.moodshare.service.CaptchaService;
 import org.example.moodshare.util.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,11 +33,13 @@ public class UserController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final CaptchaService captchaService;
 
-    public UserController(UserService userService, AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
+    public UserController(UserService userService, AuthenticationManager authenticationManager, JwtUtil jwtUtil, CaptchaService captchaService) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
+        this.captchaService = captchaService;
     }
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -44,6 +47,16 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody UserRegistrationRequest request) {
         logger.info("收到注册请求: username={}, email={}", request.getUsername(), request.getEmail());
+        
+        // 验证验证码
+        if (!captchaService.validateCaptcha(request.getSessionId(), request.getCaptchaCode())) {
+            logger.warn("注册失败: 验证码错误 - username={}", request.getUsername());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "验证码错误或已过期"
+            ));
+        }
+        
         try {
             User user = userService.registerUser(request.getUsername(), request.getEmail(), request.getPassword());
             logger.info("用户注册成功: {}", user.getUsername());
@@ -67,6 +80,15 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UserLoginRequest request) {
+        // 验证验证码
+        if (!captchaService.validateCaptcha(request.getSessionId(), request.getCaptchaCode())) {
+            logger.warn("登录失败: 验证码错误 - username={}", request.getUsername());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "验证码错误或已过期"
+            ));
+        }
+        
         UsernamePasswordAuthenticationToken authToken =
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword());
         try {

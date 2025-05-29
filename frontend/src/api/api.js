@@ -40,14 +40,20 @@ api.interceptors.response.use(
 
 // 用户相关API
 export const userApi = {
-  login: (username, password) => api.post('/auth/login', { username, password }),//登录
-  register: (username, email, password) => api.post('/auth/register', { username, email, password }),//注册
+  login: (username, password, captchaCode, sessionId) => api.post('/auth/login', { username, password, captchaCode, sessionId }),//登录
+  register: (username, email, password, captchaCode, sessionId) => api.post('/auth/register', { username, email, password, captchaCode, sessionId }),//注册
   getProfile: () => api.get('/auth/me'),//获取用户信息
   getUserById: (userId) => api.get(`/auth/users/${userId}`),//获取指定用户信息
   updateProfile: (bio, profilePicture) => api.put('/auth/profile', { bio, profilePicture }),//更新用户信息
   changePassword: (oldPassword, newPassword) => api.put('/auth/change-password', { oldPassword, newPassword }),//修改密码
   checkStatus: () => api.get('/auth/status'),//检查用户状态
   searchByUsername: (username) => api.get(`/auth/users/search?username=${encodeURIComponent(username)}`)
+};
+
+// 验证码相关API
+export const captchaApi = {
+  getCaptcha: () => api.get('/auth/captcha'),//获取验证码
+  verifyCaptcha: (sessionId, captchaCode) => api.post('/auth/captcha/verify', { sessionId, captchaCode })//验证验证码
 };
 
 // 文件上传API
